@@ -13,6 +13,8 @@ library(lubridate)
 #=======  ♠   Load data     ♠ =======
 # Import ID's
 ID_info <- read_xlsx("Data_raw/Data_ID.xlsx")
+ID_field <- read_xlsx("Data_raw/ID_base_field.xlsx", col_types = c("text", "text", "text", "text", "text", "text", "text", "numeric", "text", "numeric", "text", "text"))
+ID_vial <- read_xlsx("Data_raw/ID_base_vial.xlsx", col_types = c("text", "text", "text", "text", "text", "text", "text", "numeric", "text", "text", "text"))
 #
 # Import ARA raw files
 # Load each of 32 raw files
@@ -59,42 +61,22 @@ ARA_26c <- read_xlsx("Data_raw/EtylAcet/Anders M 26c - Etylen & Acetylen.xlsx", 
 #
 #=======  🧹   Cleaning     🧹 =======
 #
+# Format base data with timestamps correctly
+ID_field.2 <- ID_field %>%
+  mutate(Time = case_when(Round == "9x" & Time == "T1" ~ "T1x",
+                          Time_nr == "T0x_2" ~ "T0x",
+                          TRUE ~ Time)) %>%
+  mutate(Round = if_else(Time == "T1x" & Round == "9x", "9", Round)) %>%
+  mutate(across(Date, ~ymd(.x))) %>%
+  select(!c(Comments, Sample_ID))
+#
+ID_vial.2 <- ID_vial %>%
+  mutate(across(Date, ~ymd(.x))) %>%
+  select(!c(Comments, Sample_ID))
+#
+#
 # Combine all raw datasheets
 comb_ARA <- bind_rows(list(ARA_18a, ARA_18b, ARA_18c, ARA_18d, ARA_18e, ARA_18f, ARA_19a, ARA_19b, ARA_19c, ARA_19d, ARA_20a, ARA_20b, ARA_20c, ARA_20d, ARA_21a, ARA_21b, ARA_22a, ARA_22b, ARA_22c, ARA_23a, ARA_23b, ARA_23c, ARA_23d, ARA_24a, ARA_24b, ARA_24c, ARA_25a, ARA_25b, ARA_25c, ARA_26a, ARA_26b, ARA_26c), .id = "Raw") %>%
-  select(!c(Sample_order, ID_nr2)) # Ignore ID_nr2, as this is a duplicate from 25a-c
-#
-# Alternative combination
-comb_ARA <- ARA_18a %>%
-  bind_rows(ARA_18c) %>%
-  bind_rows(ARA_18d) %>%
-  bind_rows(ARA_18e) %>%
-  bind_rows(ARA_18f) %>%
-  bind_rows(ARA_19a) %>%
-  bind_rows(ARA_19b) %>%
-  bind_rows(ARA_19c) %>%
-  bind_rows(ARA_19d) %>%
-  bind_rows(ARA_20a) %>%
-  bind_rows(ARA_20b) %>%
-  bind_rows(ARA_20c) %>%
-  bind_rows(ARA_20d) %>%
-  bind_rows(ARA_21a) %>%
-  bind_rows(ARA_21b) %>%
-  bind_rows(ARA_22a) %>%
-  bind_rows(ARA_22b) %>%
-  bind_rows(ARA_22c) %>%
-  bind_rows(ARA_23a) %>%
-  bind_rows(ARA_23b) %>%
-  bind_rows(ARA_23c) %>%
-  bind_rows(ARA_23d) %>%
-  bind_rows(ARA_24a) %>%
-  bind_rows(ARA_24b) %>%
-  bind_rows(ARA_24c) %>%
-  bind_rows(ARA_25a) %>%
-  bind_rows(ARA_25b) %>%
-  bind_rows(ARA_25c) %>%
-  bind_rows(ARA_26a) %>%
-  bind_rows(ARA_26b) %>%
-  bind_rows(ARA_26c) %>%
   select(!c(Sample_order, ID_nr2)) # Ignore ID_nr2, as this is a duplicate from 25a-c
 #
 # Remove the original header, and rows of standards and blanks 
@@ -148,20 +130,27 @@ comb_ARA.3 <- comb_ARA.2 %>%
                           Round == "2x" & Time == "T1" ~ "T1x",
                           TRUE ~ Time)) %>%
   mutate(Round = case_when(Round == "9x" ~ "9",
-                        Round == "2x" ~ "2",
+                        Round == "2x" ~ "9", # Was on the samples from round 9, which fits with noted data
                         TRUE ~ Round))
 #
 # Extract vial samples
 vials_ARA <- comb_ARA.3 %>%
-  filter(Time == "T24" | Species == "v1" | Species == "v2" | Species == "v1cc" | Species == "v2cc" | Species == "B") %>%
-  select(7:11, Ethyl_conc_ppm, Acet_conc_prC)
+  filter(Time == "T24" | Species == "v1" | Species == "v2" | Species == "v1cc" | Species == "v2cc") %>%
+  select(7:11, Ethyl_conc_ppm, Acet_conc_prC) %>%
+  left_join(ID_vial.2, by = join_by(Block, Species, Time, Round, Time_nr)) %>% # Time_nr is identical here
+  relocate(c(Date, Timestamp, Time_from_T0, Temp_approx_C), .after = Time_nr)
 #
 # Extract field samples
 field_ARA <- comb_ARA.3 %>%
   filter(Time != "T24") %>%
-  filter(Species != "v1" & Species != "v2" & Species != "v1cc" & Species != "v2cc" & Species != "B") %>% # Presumably vials
-  select(7:11, Ethyl_conc_ppm, Acet_conc_prC)
+  filter(Species != "v1" & Species != "v2" & Species != "v1cc" & Species != "v2cc") %>% # Presumably vials
+  select(7:11, Ethyl_conc_ppm, Acet_conc_prC) %>%
+  select(!Time_nr) %>% # The raw data has mistakes in the Time_nr, that have been corrected for in Block and Time columns
+  left_join(ID_field.2, by = join_by(Block, Species, Time, Round)) %>%
+  relocate(c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C), .after = Round)
 #
+
+
 
 
 # Correct ID info
@@ -344,3 +333,39 @@ ARA1 <- read_xlsx("Data_raw/EtylAcet/Anders M 18a (531 prøver) - Etylen & Acety
 ARA_full <- read_xlsx("Data_raw/moss_ARA_all.xlsx", col_types = c("text","text","text","text","text","text","numeric","numeric","text","numeric", "numeric", "numeric"))
 ARA_full2 <- read_csv2("Data_raw/moss_ARA_all.csv")#, col_types = c("text","text","text","text","text","text","numeric","numeric","text","text", "numeric", "numeric"))
 
+
+
+#
+# Alternative combination
+comb_ARA <- ARA_18a %>%
+  bind_rows(ARA_18c) %>%
+  bind_rows(ARA_18d) %>%
+  bind_rows(ARA_18e) %>%
+  bind_rows(ARA_18f) %>%
+  bind_rows(ARA_19a) %>%
+  bind_rows(ARA_19b) %>%
+  bind_rows(ARA_19c) %>%
+  bind_rows(ARA_19d) %>%
+  bind_rows(ARA_20a) %>%
+  bind_rows(ARA_20b) %>%
+  bind_rows(ARA_20c) %>%
+  bind_rows(ARA_20d) %>%
+  bind_rows(ARA_21a) %>%
+  bind_rows(ARA_21b) %>%
+  bind_rows(ARA_22a) %>%
+  bind_rows(ARA_22b) %>%
+  bind_rows(ARA_22c) %>%
+  bind_rows(ARA_23a) %>%
+  bind_rows(ARA_23b) %>%
+  bind_rows(ARA_23c) %>%
+  bind_rows(ARA_23d) %>%
+  bind_rows(ARA_24a) %>%
+  bind_rows(ARA_24b) %>%
+  bind_rows(ARA_24c) %>%
+  bind_rows(ARA_25a) %>%
+  bind_rows(ARA_25b) %>%
+  bind_rows(ARA_25c) %>%
+  bind_rows(ARA_26a) %>%
+  bind_rows(ARA_26b) %>%
+  bind_rows(ARA_26c) %>%
+  select(!c(Sample_order, ID_nr2)) # Ignore ID_nr2, as this is a duplicate from 25a-c
