@@ -135,7 +135,11 @@ field_ARA_wide.3 <- field_ARA_wide.2 %>%
 # A : Area in square meters (m^2)
 #
 field_ARA_wide.4 <- field_ARA_wide.3 %>%
-  mutate(Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * 283) / Ch_area_m2) # Temperature set at constant 10°C !!!
+  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * 283) / Ch_area_m2) # Temperature set at constant 10°C !!!
+#
+
+
+
 #
 #
 #------- • Vial data -------
@@ -170,6 +174,68 @@ mutate(across(Timestamp, ~hm(.x)))# %>%
 #
 #-------  ♪   N2 fixation   ♪ -------
 
+#
+#
+#
+#-------  ♪   Outliers      ♪ -------
+#
+# Ethylene production has several negative values:
+# Cleveland dot plot
+dotchart(field_ARA_wide.4$Et_prod_umol_h_m2, 
+         main="Cleveland plot - Ethylene production", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = field_ARA_wide.4$Block, 
+         groups = field_ARA_wide.4$Round,
+         gpch = 12, gcolor = 1)
+#
+# Ethylene production per block
+field_ARA_wide.4_block <- field_ARA_wide.4 %>%
+  select(1:3, Et_prod_umol_h_m2) %>%
+  pivot_wider(names_from = Block, values_from = Et_prod_umol_h_m2)
+#
+# Ethylene production per Round
+field_ARA_wide.4_round <- field_ARA_wide.4 %>%
+  select(1:3, Et_prod_umol_h_m2) %>%
+  mutate(across(Round, ~as.character(.x))) %>%
+  mutate(Round = case_when(Round == "1" ~ "One",
+                           Round == "2" ~ "Two",
+                           Round == "3" ~ "Three",
+                           Round == "4" ~ "Four",
+                           Round == "5" ~ "Five",
+                           Round == "6" ~ "Six",
+                           Round == "7" ~ "Seven",
+                           Round == "8" ~ "Eight",
+                           Round == "9" ~ "Nine",
+                           Round == "10" ~ "Ten",
+                           Round == "11" ~ "Eleven",
+                           TRUE ~ Round)) %>%
+  pivot_wider(names_from = Round, values_from = Et_prod_umol_h_m2)
+#
+#
+plot_ly(field_ARA_wide.4, x = ~Et_prod_umol_h_m2, y = ~Species, name = "Ethylene production", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
+  layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
+#
+# Separate by block
+plot_ly(field_ARA_wide.4_block, x = ~B, y = ~Species, name = "Blue", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
+  add_trace(x = ~P, y = ~Species, name = "Purple",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~R, y = ~Species, name = "Red",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~W, y = ~Species, name = "White",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Y, y = ~Species, name = "Yellow",type = 'scatter', mode = "markers", marker = list(color = "#F0E442")) %>%
+  layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
+#
+# Separate by block
+plot_ly(field_ARA_wide.4_round, x = ~One, y = ~Species, name = "1", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Two, y = ~Species, name = "2",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Three, y = ~Species, name = "3",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Four, y = ~Species, name = "4",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Five, y = ~Species, name = "5",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~Six, y = ~Species, name = "6",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Seven, y = ~Species, name = "7",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Eight, y = ~Species, name = "8",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Nine, y = ~Species, name = "9",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Ten, y = ~Species, name = "10",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Eleven, y = ~Species, name = "11",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
 #
 #
 #
