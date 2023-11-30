@@ -153,22 +153,14 @@ field_ARA <- comb_ARA.3 %>%
 
 
 
-# Correct ID info
-ID_info <- ID_info %>%
-  mutate(Time = case_when(Round == "9x" & Time == "T1" ~ "T1x",
-                          Time_nr == "T0x_2" ~ "T0x",
-                          TRUE ~ Time)) %>%
-  mutate(Round = if_else(Time == "T1x" & Round == "9x", "9", Round))
 
 
 
 
 
-
-
-
-
-
+#
+#
+#------- • Export clean data -------
 # Save Field and vial data separately
 write_csv(vials_ARA, "Data_clean/vial_ARA.csv", na = "NA")
 write_csv(field_ARA, "Data_clean/field_ARA.csv", na = "NA")
@@ -369,3 +361,13 @@ comb_ARA <- ARA_18a %>%
   bind_rows(ARA_26b) %>%
   bind_rows(ARA_26c) %>%
   select(!c(Sample_order, ID_nr2)) # Ignore ID_nr2, as this is a duplicate from 25a-c
+
+
+
+
+# Correct ID info
+ID_info <- ID_info %>%
+  mutate(Time = case_when(Round == "9x" & Time == "T1" ~ "T1x",
+                          Time_nr == "T0x_2" ~ "T0x",
+                          TRUE ~ Time)) %>%
+  mutate(Round = if_else(Time == "T1x" & Round == "9x", "9", Round))
