@@ -3,6 +3,7 @@
 # 
 #=======  ♣   Libraries     ♣ =======
 library(tidyverse)
+library(readxl)
 library(lubridate)
 library(car)
 library(nlme)
@@ -22,6 +23,17 @@ Ch_H <- 7 # Chamber height (cm) above moss surface. This needs to be changed to 
 Ch_r <- 5 # Chamber radius (cm)
 Ch_vol_L <- (Ch_r^2*pi*Ch_H)/1000 # Chamber vol in L
 Ch_area_m2 <- (Ch_r^2*pi)/10000 # Chamber area in m2
+#
+#
+# Constants
+#
+# Gas constant ~ 8.31446261815324 L kPa K^-1 µmol^-1
+# Avogadro constant × Boltzmann constant: N_A × k
+# Eite Tiesinga, Peter J. Mohr, David B. Newell, Barry N. Taylor; CODATA Recommended Values of the Fundamental Physical Constants: 2018. J. Phys. Chem. Ref. Data 1 September 2021; 50 (3): 033105. https://doi.org/10.1063/5.0064853
+R_const <- 6.02214076*10^23 * 1.380649*10^(-23)
+#
+# Pressure: 101.3 kPa
+p <- 101.3
 #
 #
 #
@@ -79,7 +91,9 @@ field_ARA_wide <- left_join(field_ARA.Time, field_ARA.Ethyl, by = join_by(Block,
   left_join(field_ARA.Acet, by = join_by(Block, Species, Round))
 #
 # Do the math
-x <- field_ARA_wide %>%
+#
+#
+field_ARA_wide.2 <- field_ARA_wide %>%
   # Calculate the time difference from T_n-1 to T_n
   mutate(Time1 = hour(seconds_to_period(T1 - T0))*60 + minute(seconds_to_period(T1 - T0)),
          Time2 = hour(seconds_to_period(T2 - T1))*60 + minute(seconds_to_period(T2 - T1)),
@@ -94,9 +108,34 @@ x <- field_ARA_wide %>%
 # Some of the Acetylene values are well below 0, and should probably be corrected.
 # Three samples have negative starting values (T0), but then subsequently high positive values at T1
 #
-xx <- x %>%
-  mutate(Et_prod_ppm_pr_h_1 = (Ethyl_conc_ppm_T0 - Ethyl_conc_ppm_T1)/(Time1/60))
-
+# To calculate the ethylene production
+# Et_corr = Et_ppm - Ac_ppm × [Et]tn-1 / [Ac]tn-1
+#
+# Where
+# Et_corr  : Corrected ethylene production in parts per million (ppm)
+# Et_ppm   : Ethylene production in parts per million per hour (ppm h^-1)
+# Ac_ppm   : Acetylene loss per hour (ppm h^-1)
+# [Et]tn-1 : Ethylene concentration at time tn-1, "start" concentration
+# [Ac]tn-1 : Acetylene concentration at time tn-1, "start" concentration
+#
+field_ARA_wide.3 <- field_ARA_wide.2 %>%
+  mutate(Et_prod_ppm_pr_h.1 = (Ethyl_conc_ppm_T0 - Ethyl_conc_ppm_T1)/(Time1/60),
+         Act_lost_ppm_pr_h.1 = (Acet_conc_ppm_T0 - Acet_conc_ppm_T1)/(Time1/60)) %>%
+  mutate(Corr_Et_prod_pr_h.1 = Et_prod_ppm_pr_h.1 - (Act_lost_ppm_pr_h.1*(Ethyl_conc_ppm_T0/Acet_conc_ppm_T0)))
+#
+# Ethylene production per hour per square meter (µmol h^-1 m^-2)
+# Et_ppm × (V × P) / (R × T) / A
+#
+# Where
+# Et_ppm   : Ethylene production in parts per million per hour (ppm h^-1)
+# V : Volume in litres (L)
+# P : Pressure in kilo Pascal (kPa)
+# R : the gas constant ~ 8.31446261815324 L kPa K^-1 µmol^-1
+# T : Temperature in Kelvin (K)
+# A : Area in square meters (m^2)
+#
+field_ARA_wide.4 <- field_ARA_wide.3 %>%
+  mutate(Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * 283) / Ch_area_m2) # Temperature set at constant 10°C !!!
 #
 #
 #------- • Vial data -------
