@@ -2,6 +2,7 @@
 # By Emil A.S. Andersen
 # 
 #=======  ♣   Libraries     ♣ =======
+library(plotly)
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -76,6 +77,7 @@ field_ARA.Acet <- field_ARA.2 %>%
   select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm)) %>%
   complete(Block, Species, Time, Round) %>%
   mutate(Acet_conc_ppm = Acet_conc_prC*10000) %>%
+  #mutate(Acet_conc_ppm = if_else(Acet_conc_ppm <= 0, 0, Acet_conc_ppm)) %>%
   select(!Acet_conc_prC) %>%
   pivot_wider(names_from = Time, values_from = Acet_conc_ppm) %>%
   rename("Acet_conc_ppm_T0" = T0,
@@ -119,25 +121,27 @@ field_ARA_wide.2 <- field_ARA_wide %>%
 # [Ac]tn-1 : Acetylene concentration at time tn-1, "start" concentration
 #
 field_ARA_wide.3 <- field_ARA_wide.2 %>%
-  mutate(Et_prod_ppm_pr_h.1 = (Ethyl_conc_ppm_T0 - Ethyl_conc_ppm_T1)/(Time1/60),
-         Act_lost_ppm_pr_h.1 = (Acet_conc_ppm_T0 - Acet_conc_ppm_T1)/(Time1/60)) %>%
+  mutate(Et_prod_ppm_pr_h.1 = (Ethyl_conc_ppm_T1 - Ethyl_conc_ppm_T0)/(Time1/60),
+         Act_lost_ppm_pr_h.1 = (Acet_conc_ppm_T1 - Acet_conc_ppm_T0)/(Time1/60)) %>%
   mutate(Corr_Et_prod_pr_h.1 = Et_prod_ppm_pr_h.1 - (Act_lost_ppm_pr_h.1*(Ethyl_conc_ppm_T0/Acet_conc_ppm_T0)))
 #
 # Ethylene production per hour per square meter (µmol h^-1 m^-2)
 # Et_ppm × (V × P) / (R × T) / A
 #
 # Where
-# Et_ppm   : Ethylene production in parts per million per hour (ppm h^-1)
-# V : Volume in litres (L)
-# P : Pressure in kilo Pascal (kPa)
-# R : the gas constant ~ 8.31446261815324 L kPa K^-1 µmol^-1
-# T : Temperature in Kelvin (K)
-# A : Area in square meters (m^2)
+# Et_ppm  : Ethylene production in parts per million per hour (ppm h^-1)
+# V       : Volume in litres (L)
+# P       : Pressure in kilo Pascal (kPa)
+# R       : the gas constant ~ 8.31446261815324 L kPa K^-1 µmol^-1
+# T       : Temperature in Kelvin (K)
+# A       : Area in square meters (m^2)
 #
 field_ARA_wide.4 <- field_ARA_wide.3 %>%
   mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * 283) / Ch_area_m2) # Temperature set at constant 10°C !!!
 #
-
+# Set negative production to 0
+field_ARA_wide.5 <- field_ARA_wide.4 %>%
+  mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
 
 
 #
@@ -151,11 +155,43 @@ mutate(across(Timestamp, ~hm(.x)))# %>%
 #
 #=======  §§  Statistics    §§ =======
 #-------  »   Q1            « -------
+# 1.	How active can mosses potentially be in their N2-fixation depending on moisture, temperature, and light availability?
+#
+Q1_ARA <- field_ARA_wide.5 %>%
+  mutate(across(Round, ~as.character(.x))) %>%
+  mutate(across(c(Block, Species, Round), ~as.factor(.x)))
+#
+# Transform data
+Q1_ARA <- Q1_ARA %>%
+  select(1:3, Et_prod_umol_h_m2) %>%
+  mutate(logEt_prod = log(Et_prod_umol_h_m2+1),
+         sqrtEt_prod = sqrt((Et_prod_umol_h_m2/100)),
+         arcEt_prod = asin(sqrt((Et_prod_umol_h_m2/1000))))
+#
+lme1 <- lme(arcEt_prod ~ Round*Species,
+            random = ~1|Block/Species,
+            data = Q1_ARA, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme1), resid(lme1), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme1), main = "Normally distributed?")                 
+qqline(resid(lme1), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme1, type=2)
+#
+#
 
 #
 #
 #
 #-------  »   Q2            « -------
+# 2.	How do the different bryophyte functional groups differ their N2-fixation potential through the year of the Arctic?
+#
 
 #
 #
@@ -211,6 +247,11 @@ field_ARA_wide.4_round <- field_ARA_wide.4 %>%
                            TRUE ~ Round)) %>%
   pivot_wider(names_from = Round, values_from = Et_prod_umol_h_m2)
 #
+# Ethylene production per species
+field_ARA_wide.4_species <- field_ARA_wide.4 %>%
+  select(1:3, Et_prod_umol_h_m2) %>%
+  pivot_wider(names_from = Species, values_from = Et_prod_umol_h_m2)
+#
 #
 plot_ly(field_ARA_wide.4, x = ~Et_prod_umol_h_m2, y = ~Species, name = "Ethylene production", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
   layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
@@ -223,7 +264,7 @@ plot_ly(field_ARA_wide.4_block, x = ~B, y = ~Species, name = "Blue", type = 'sca
   add_trace(x = ~Y, y = ~Species, name = "Yellow",type = 'scatter', mode = "markers", marker = list(color = "#F0E442")) %>%
   layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
 #
-# Separate by block
+# Separate by Time
 plot_ly(field_ARA_wide.4_round, x = ~One, y = ~Species, name = "1", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Two, y = ~Species, name = "2",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Three, y = ~Species, name = "3",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
@@ -237,7 +278,7 @@ plot_ly(field_ARA_wide.4_round, x = ~One, y = ~Species, name = "1", type = 'scat
   add_trace(x = ~Eleven, y = ~Species, name = "11",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
   layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
 #
-# Separate by block
+# Separate by Time
 plot_ly(field_ARA_wide.4_round, x = ~One, y = ~Species, name = "一", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Two, y = ~Species, name = "二",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Three, y = ~Species, name = "三",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
@@ -250,6 +291,44 @@ plot_ly(field_ARA_wide.4_round, x = ~One, y = ~Species, name = "一", type = 'sc
   add_trace(x = ~Ten, y = ~Species, name = "十",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Eleven, y = ~Species, name = "十一",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
   layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
+#
+# Separate by Species over time
+plot_ly(field_ARA_wide.4_species, x = ~Au, y = ~Round, name = "Aulacomnium turgidum", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Di, y = ~Round, name = "Dicranum scoparium",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Hy, y = ~Round, name = "Hylocomium splendens",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Pl, y = ~Round, name = "Pleurozium schreberi",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Po, y = ~Round, name = "Polytrichum commune",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~Pti, y = ~Round, name = "Ptilidium ciliare",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Ra, y = ~Round, name = "Racomitrium lanuginosum",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~S, y = ~Round, name = "Sphagnum sp",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Sf, y = ~Round, name = "Sphagnum fuscum",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Sli, y = ~Round, name = "Sphagnum lindbergii",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
+#
+#
+x <- field_ARA_wide %>%
+  mutate(Acet_diff = Acet_conc_ppm_T0 - Acet_conc_ppm_T1) %>%
+  filter(Acet_diff <= 0)
+
+
+y <- field_ARA_wide %>%
+  mutate(Ethyl_diff = Ethyl_conc_ppm_T0 - Ethyl_conc_ppm_T1) %>%
+  filter(Ethyl_diff <= 0)
+
+
+z <- field_ARA_wide.4 %>%
+  mutate(Et_prod_pos = Et_prod_umol_h_m2 >= 0)
+z.N <- z %>%
+  filter(!Et_prod_pos)
+z.P <- z %>%
+  filter(Et_prod_pos)
+
+z.N %>% count(Round)
+z.P %>% count(Round)
+
+z.N %>% count(Species)
+z.P %>% count(Species)
+
 #
 #
 #
