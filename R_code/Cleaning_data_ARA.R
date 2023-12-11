@@ -149,18 +149,27 @@ field_ARA <- comb_ARA.3 %>%
   left_join(ID_field.2, by = join_by(Block, Species, Time, Round)) %>%
   relocate(c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C), .after = Round)
 #
-
-
-
-
-
-
-
-
-
+# Simplest solution for changing 5 Acetylene values that have increased from T0 or were negative at T0
+# Acetylene concentrations are replaced with average for the same round and species at T0, if T0 is lower than T1
+field_ARA <- field_ARA %>%
+  mutate(Acet_conc_prC = case_when(Block == "B" & Species == "Di" & Round == "11" & Time == "T0" ~ mean(Acet_conc_prC[which(
+                                     Block != "B" & Species == "Di" & Round == "11" & Time == "T0")]),
+                                   Block == "Y" & Species == "Po" & Round == "11" & Time == "T0" ~ mean(Acet_conc_prC[which(
+                                     Block != "Y" & Species == "Po" & Round == "11" & Time == "T0")]),
+                                   Block == "R" & Species == "Hy" & Round == "6" & Time == "T0" ~ mean(Acet_conc_prC[which(
+                                     Block != "R" & Species == "Hy" & Round == "6" & Time == "T0")]),
+                                   Block == "W" & Species == "Pti" & Round == "5" & Time == "T0" ~ mean(Acet_conc_prC[which(
+                                     Block != "W" & Species == "Pti" & Round == "5" & Time == "T0")]),
+                                   Block == "Y" & Species == "Pti" & Round == "5" & Time == "T0" ~ mean(Acet_conc_prC[which(
+                                     Block != "Y" & Species == "Pti" & Round == "5" & Time == "T0")]),
+                                   TRUE ~ Acet_conc_prC))
 #
 #
 #------- • Export clean data -------
+# CAREFUL!
+1
+#
+#
 # Save Field and vial data separately
 write_csv(vials_ARA, "Data_clean/vial_ARA.csv", na = "NA")
 write_csv(field_ARA, "Data_clean/field_ARA.csv", na = "NA")
@@ -168,7 +177,7 @@ write_csv(field_ARA, "Data_clean/field_ARA.csv", na = "NA")
 
 
 
-
+filter(field_ARA, Block == "Y" & Species == "Pti" & Round == "5" & Time == "T0")
 
 
 
