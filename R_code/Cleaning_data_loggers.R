@@ -1,21 +1,27 @@
 # Cleaning EM50 and TinyTag information
 #
+# Moss project - N2-fixation
 # By Emil A.S. Andersen
 #
 #
-# Libraries
+#=======  ♣   Libraries     ♣ =======
 library(tidyverse)
 library(readxl)
 library(lubridate)
 #
 #
+#
+#=======  ♠   TinyTag     ♠ =======
 # Load TinyTag temperature measurements
 #
-# ═════════════════════════════╗
-#                              ▼
-TinyTag_heath1 <- read_csv("Data_raw/Loggers/AirT Heath 20220916.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_heath1 <- read_csv("Data_raw/Loggers/AirT Heath 202009-202101.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_heath2 <- read_csv("Data_raw/Loggers/AirT Heath 202101-202106.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_heath3 <- read_csv("Data_raw/Loggers/AirT Heath 20220721 (until 0711).csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_heath4 <- read_csv("Data_raw/Loggers/AirT Heath 20220916.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+#
+TinyTag_heath <- bind_rows(list(TinyTag_heath1, TinyTag_heath2, TinyTag_heath3, TinyTag_heath4))
 # Change accordingly, if only using average temperature and not max and min 
-TinyTag_heath1 <- TinyTag1 %>% # Split temperature from the unit and Date and time. Set temperature as numeric
+TinyTag_heath <- TinyTag_heath %>% # Split temperature from the unit and Date and time. Set temperature as numeric
   separate(AirT, sep = " ", into = c("AirT", "Unit")) %>%
   separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
   separate(Time, sep = ":", into = c("hour", "min", "sec")) %>%
@@ -24,8 +30,16 @@ TinyTag_heath1 <- TinyTag1 %>% # Split temperature from the unit and Date and ti
   select(!"sec") %>%
   mutate(across(c(AirT), as.numeric))
 #
+
+TinyTag_heath %>%  
+  mutate(across(Day_ID, ~ymd_hm(.x))) %>% 
+  ggplot() + geom_line(aes(x = Day_ID, y = AirT))
+
+
 #
 #
+#
+#=======  ♠   EM50        ♠ =======
 # ### EM50 loggers ###
 #
 #
@@ -237,3 +251,6 @@ Positive_PAR <- Positive_PAR %>% rename("PAR" = colnames(Positive_PAR[2]))
 # Combine, Temperature and PAR
 flux_all_TempPAR <- full_join(flux_all_Temp, Positive_PAR, by = "Day_ID")
 #
+#
+#
+#=======  ■  { The End }    ■ =======
