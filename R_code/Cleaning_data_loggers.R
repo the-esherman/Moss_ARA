@@ -14,12 +14,20 @@ library(lubridate)
 #=======  ♠   TinyTag     ♠ =======
 # Load TinyTag temperature measurements
 #
-TinyTag_heath1 <- read_csv("Data_raw/Loggers/AirT Heath 202009-202101.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
-TinyTag_heath2 <- read_csv("Data_raw/Loggers/AirT Heath 202101-202106.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
-TinyTag_heath3 <- read_csv("Data_raw/Loggers/AirT Heath 20220721 (until 0711).csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
-TinyTag_heath4 <- read_csv("Data_raw/Loggers/AirT Heath 20220916.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+# Heath habitat
+TinyTag_heath_202101 <- read_csv("Data_raw/Loggers/AirT Heath 202009-202101.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_heath_202106 <- read_csv("Data_raw/Loggers/AirT Heath 202101-202106.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_heath_20210824 <- read_csv("Data_raw/Loggers/AirT Heath 20210824.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
 #
-TinyTag_heath <- bind_rows(list(TinyTag_heath1, TinyTag_heath2, TinyTag_heath3, TinyTag_heath4))
+# New logger as old no longer would download
+# Delete first measurement as from indoors!
+TinyTag_heath_20220721 <- read_csv("Data_raw/Loggers/AirT Heath 20220721 (until 0711).csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_heath_20220721 <- TinyTag_heath_20220721 %>%
+  filter(Record != 1)
+#
+TinyTag_heath_20220916 <- read_csv("Data_raw/Loggers/AirT Heath 20220916.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+#
+TinyTag_heath <- bind_rows(list(TinyTag_heath_202101, TinyTag_heath_202106, TinyTag_heath_20210824, TinyTag_heath_20220721, TinyTag_heath_20220916))
 # Change accordingly, if only using average temperature and not max and min 
 TinyTag_heath <- TinyTag_heath %>% # Split temperature from the unit and Date and time. Set temperature as numeric
   separate(AirT, sep = " ", into = c("AirT", "Unit")) %>%
@@ -30,8 +38,39 @@ TinyTag_heath <- TinyTag_heath %>% # Split temperature from the unit and Date an
   select(!"sec") %>%
   mutate(across(c(AirT), as.numeric))
 #
-
+# Graph temperature values
 TinyTag_heath %>%  
+  mutate(across(Day_ID, ~ymd_hm(.x))) %>% 
+  ggplot() + geom_line(aes(x = Day_ID, y = AirT))
+#
+# Missing values from August to December is from logger no longer connecting. Unsure if data available
+#
+#
+# Wetland habitat
+TinyTag_wetland_202101 <- read_csv("Data_raw/Loggers/AirT Wetland 202007-202101.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_wetland_202102 <- read_csv("Data_raw/Loggers/AirT Wetland 20210219.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_wetland_202106 <- read_csv("Data_raw/Loggers/AirT Wetland 202106.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+#
+# Duplicate?
+#TinyTag_wetland_202106 <- read_csv("Data_raw/Loggers/AirT Wetland all 20210603.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+#
+TinyTag_wetland_202108 <- read_csv("Data_raw/Loggers/AirT Wetland 20210824.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_wetland_202112 <- read_csv("Data_raw/Loggers/AirtT Wetland 20211201.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+TinyTag_wetland_202207 <- read_csv("Data_raw/Loggers/AirT Wetland 20220721 (until 0406).csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+#
+TinyTag_wetland <- bind_rows(list(TinyTag_wetland_202101, TinyTag_wetland_202102, TinyTag_wetland_202106, TinyTag_wetland_202108, TinyTag_wetland_202112, TinyTag_wetland_202207))
+# Change accordingly, if only using average temperature and not max and min 
+TinyTag_wetland <- TinyTag_wetland %>% # Split temperature from the unit and Date and time. Set temperature as numeric
+  separate(AirT, sep = " ", into = c("AirT", "Unit")) %>%
+  separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
+  separate(Time, sep = ":", into = c("hour", "min", "sec")) %>%
+  unite(hour, min, col = "Time", sep = ":") %>%
+  unite(Date, Time, col = "Day_ID", sep = " ") %>%
+  select(!"sec") %>%
+  mutate(across(c(AirT), as.numeric))
+#
+# Graph temperature values
+TinyTag_wetland %>%  
   mutate(across(Day_ID, ~ymd_hm(.x))) %>% 
   ggplot() + geom_line(aes(x = Day_ID, y = AirT))
 
