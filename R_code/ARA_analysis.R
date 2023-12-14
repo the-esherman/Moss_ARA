@@ -8,6 +8,7 @@ library(readxl)
 library(lubridate)
 library(car)
 library(nlme)
+#library(lme4)
 #
 #
 #
@@ -165,12 +166,15 @@ field_ARA_wide.3 <- field_ARA_wide.2 %>%
 # A       : Area in square meters (m^2)
 #
 field_ARA_wide.4 <- field_ARA_wide.3 %>%
-  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * AirT_C) / Ch_area_m2) # Temperature set from T0 at Wetland !!!
+  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * AirT_C+273) / Ch_area_m2) # Temperature set from T0 at Wetland !!!
 #
 # Set negative production to 0
 field_ARA_wide.5 <- field_ARA_wide.4 %>%
   mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
 
+
+
+ggplot(data = field_ARA_wide.5, aes(x = Et_prod_umol_h_m2)) + geom_histogram()
 
 #
 #
@@ -192,13 +196,19 @@ Q1_ARA <- field_ARA_wide.5 %>%
 # Transform data
 Q1_ARA <- Q1_ARA %>%
   select(1:3, Et_prod_umol_h_m2) %>%
-  mutate(logEt_prod = log(Et_prod_umol_h_m2+1),
-         sqrtEt_prod = sqrt((Et_prod_umol_h_m2/100)),
-         arcEt_prod = asin(sqrt((Et_prod_umol_h_m2/1000))))
+  mutate(logEt_prod = log(Et_prod_umol_h_m2+2),
+         sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
+         cubeEt_prod = Et_prod_umol_h_m2^(1/9),
+         sqEt_prod = Et_prod_umol_h_m2^2,
+         ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
+         arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))))
 #
-lme1 <- lme(arcEt_prod ~ Round*Species,
+lme1 <- lme(cubeEt_prod ~ Round*Species,
             random = ~1|Block/Species,
             data = Q1_ARA, na.action = na.exclude, method = "REML")
+#
+# Using lme4 package:
+# lmer(logEt_prod ~ Round*Species + (1 | Block/Species), data = Q1_ARA, na.action = na.exclude)
 #
 # Checking assumptions:
 par(mfrow = c(1,2))
