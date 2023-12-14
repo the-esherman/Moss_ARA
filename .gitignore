@@ -10,8 +10,9 @@ Data_raw/*
 # Clean data
 Data_clean/*
 
-# Images
+# Images and exported data
 images/*
+export/*
 
 # Some R files of old. Not sure if I want to commit. If cleaned up
 R_code/Load_data_ARA.R
