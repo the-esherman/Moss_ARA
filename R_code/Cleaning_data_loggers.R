@@ -128,7 +128,7 @@ TinyTag_wetland.2 <- TinyTag_wetland.1 %>%
   mutate(Date = date(Tid),
          Time = as_hms(Tid)) %>%
   relocate(c(Date, Time, Tid), .after = Record) %>%
-  select(!c("Date_time", "Unit", "UnitMax", "UnitMin")) %>%
+  select(!c("id_file", "Date_time", "Unit", "UnitMax", "UnitMin")) %>%
   rename("Date_time" = Tid,
          "AirT_C" = AirT)
 #
