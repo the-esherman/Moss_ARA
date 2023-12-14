@@ -19,6 +19,9 @@ ID_info <- read_xlsx("Data_raw/Data_ID.xlsx")
 field_ARA <- read_csv("Data_clean/field_ARA.csv", col_names = TRUE)
 vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
 #
+# Air temperature
+AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
+#
 # Chamber size
 Ch_H <- 7 # Chamber height (cm) above moss surface. This needs to be changed to match each plot estimated height
 Ch_r <- 5 # Chamber radius (cm)
@@ -46,22 +49,37 @@ p <- 101.3
 #=======  ♦   Main data     ♦ =======
 #
 #
+#------- • Environmental -------
+AirT_wetland.1 <- AirT_wetland %>%
+  select(Date, Time, AirT_C) %>%
+  rename("Tid" = Time)
+
+#
+#
 #------- • Field data -------
 #
-# Remove chamber test
+# Remove chamber test and combine with temperature
 field_ARA.2 <- field_ARA %>%
-  filter(Species != "B")
+  filter(Species != "B") %>%
+  # Round timestamp to nearest hour!
+  mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
+  mutate(Tid = round_date(ymd_hms(Date_time), unit = "hour")) %>%
+  mutate(Tid = hms::as_hms(Tid)) %>%
+  # Combine with air temperature
+  left_join(AirT_wetland.1, by = join_by(Date, Tid)) %>%
+  # Remove temporary variables
+  select(!c("Date_time", "Tid"))
 #
 # Pivot wider and combine:
 # Timestamp
 field_ARA.Time <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC)) %>%
+  select(!c(Time_nr, Date, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C)) %>%
   complete(Block, Species, Time, Round) %>%
   pivot_wider(names_from = Time, values_from = Timestamp)
 #
 # Ethylene
 field_ARA.Ethyl <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Acet_conc_prC)) %>%
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Acet_conc_prC, AirT_C)) %>%
   complete(Block, Species, Time, Round) %>%
   pivot_wider(names_from = Time, values_from = Ethyl_conc_ppm) %>%
   rename("Ethyl_conc_ppm_T0" = T0,
@@ -74,7 +92,7 @@ field_ARA.Ethyl <- field_ARA.2 %>%
 #
 # Acetylene
 field_ARA.Acet <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm)) %>%
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, AirT_C)) %>%
   complete(Block, Species, Time, Round) %>%
   mutate(Acet_conc_ppm = Acet_conc_prC*10000) %>%
   #mutate(Acet_conc_ppm = if_else(Acet_conc_ppm <= 0, 0, Acet_conc_ppm)) %>%
@@ -88,8 +106,18 @@ field_ARA.Acet <- field_ARA.2 %>%
          "Acet_conc_ppm_T3" = T3,
          "Acet_conc_ppm_T4" = T4)
 #
+# Air temperature
+field_ARA.Temp <- field_ARA.2 %>% 
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC)) %>%
+  complete(Block, Species, Time, Round) %>%
+  pivot_wider(names_from = Time, values_from = AirT_C) %>%
+  select(!c(T0x, T1, T1x, T2, T3, T4)) %>%
+  rename("AirT_C" = T0)
+
+#
 # Join 
-field_ARA_wide <- left_join(field_ARA.Time, field_ARA.Ethyl, by = join_by(Block, Species, Round)) %>%
+field_ARA_wide <-  left_join(field_ARA.Time, field_ARA.Temp, by = join_by(Block, Species, Round)) %>% 
+  left_join(field_ARA.Ethyl, by = join_by(Block, Species, Round)) %>%
   left_join(field_ARA.Acet, by = join_by(Block, Species, Round))
 #
 # Do the math
@@ -137,7 +165,7 @@ field_ARA_wide.3 <- field_ARA_wide.2 %>%
 # A       : Area in square meters (m^2)
 #
 field_ARA_wide.4 <- field_ARA_wide.3 %>%
-  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * 283) / Ch_area_m2) # Temperature set at constant 10°C !!!
+  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * AirT_C) / Ch_area_m2) # Temperature set from T0 at Wetland !!!
 #
 # Set negative production to 0
 field_ARA_wide.5 <- field_ARA_wide.4 %>%
@@ -149,7 +177,7 @@ field_ARA_wide.5 <- field_ARA_wide.4 %>%
 #------- • Vial data -------
 
 # ??
-mutate(across(Timestamp, ~hm(.x)))# %>%
+#mutate(across(Timestamp, ~hm(.x)))# %>%
 #
 #
 #
