@@ -243,6 +243,20 @@ Anova(lme1, type=2)
 #
 #-------  ♪   ARA           ♪ -------
 
+field_ARA_wide.5 %>%
+  mutate(MP = case_when(Round == 1 ~ "Sept20",
+                        Round == 2 ~ "Oct20",
+                        Round == 3 ~ "Nov20",
+                        Round == 4 ~ "Feb21",
+                        Round == 5 ~ "Mar21",
+                        Round == 6 ~ "May21",
+                        Round == 7 ~ "Jun21",
+                        Round == 8 ~ "Jul21",
+                        Round == 9 ~ "Sept21",
+                        Round == 10 ~ "Oct21",
+                        Round == 11 ~ "Nov21")) %>%
+  ggplot(aes(x = factor(MP, level=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")), y = Et_prod_umol_h_m2)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
+
 #
 #
 #
