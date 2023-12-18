@@ -29,6 +29,10 @@ Ch_r <- 5 # Chamber radius (cm)
 Ch_vol_L <- (Ch_r^2*pi*Ch_H)/1000 # Chamber vol in L
 Ch_area_m2 <- (Ch_r^2*pi)/10000 # Chamber area in m2
 #
+# Vial size
+Vial_vol_L <- 20/1000 # 20mL vials, the small ones, and 22 for the taller ones. Does not take into account the actual headspace after mosses
+Vial_area_m2 <- (1.1^2*pi*2)/10000
+#
 #
 # Constants
 #
@@ -179,6 +183,41 @@ ggplot(data = field_ARA_wide.5, aes(x = Et_prod_umol_h_m2)) + geom_histogram()
 #
 #
 #------- • Vial data -------
+#
+# 
+vial_ARA.1 <- vial_ARA %>%
+  mutate(Species = str_replace_all(Species, "M", "B")) %>% #Replace M for Myren with B for Blank
+  filter(!str_starts(Species, "v")) #Remove vial tests
+#
+# Blanks
+# Averaged for each round and habitat
+vial_ARA.b <- vial_ARA.1 %>%
+  filter(str_starts(Species, "B")) %>%
+  summarise(across(c(Ethyl_conc_ppm, Acet_conc_prC), ~mean(.x)), .by = c(Block, Round)) %>%
+  rename("Ethyl_blank" = Ethyl_conc_ppm,
+         "Acet_blank" = Acet_conc_prC,
+         "Habitat" = Block)
+#
+# Join blanks to non-blanks and correct
+vial_ARA.2 <- vial_ARA.1 %>%
+  filter(!str_starts(Species, "B")) %>%
+  mutate(Habitat = if_else(str_starts(Species, "S"), "M", "H")) %>%
+  left_join(vial_ARA.b, by = join_by(Round, Habitat), multiple = "all") %>%
+  mutate(Time24 = hour(seconds_to_period(hms(Time_from_T0) - hms(Timestamp)))*60 + minute(seconds_to_period(hms(Time_from_T0) - hms(Timestamp))) + 24*60) %>%
+  mutate(Et_prod_ppm_pr_h = (Ethyl_conc_ppm - Ethyl_blank)/(Time24),
+         Act_lost_ppm_pr_h = (Acet_conc_prC*10000 - Acet_blank*10000)/(Time24)) %>%
+  mutate(Corr_Et_prod_pr_h = Et_prod_ppm_pr_h - (Act_lost_ppm_pr_h*(Ethyl_blank/Acet_blank))) %>%
+  mutate(Temp_approx_C = case_when(is.na(Temp_approx_C) & Round == "C" ~ 15,
+                                   is.na(Temp_approx_C) & Round == "C5" ~ 5,
+                                   TRUE ~ Temp_approx_C)) %>%
+  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * Temp_approx_C+273) / Vial_area_m2)
+#
+vial_ARA.3 <- vial_ARA.2 %>%
+  mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
+
+vial_ARA.3 %>%
+  ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species)
+
 
 # ??
 #mutate(across(Timestamp, ~hm(.x)))# %>%
@@ -255,7 +294,7 @@ field_ARA_wide.5 %>%
                         Round == 9 ~ "Sept21",
                         Round == 10 ~ "Oct21",
                         Round == 11 ~ "Nov21")) %>%
-  ggplot(aes(x = factor(MP, level=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")), y = Et_prod_umol_h_m2)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
+  ggplot(aes(x = factor(MP, level=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")), y = Et_prod_umol_h_m2)) + geom_boxplot() + facet_wrap(~Species, scales = "free", ncol = 3)
 
 #
 #
