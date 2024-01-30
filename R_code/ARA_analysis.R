@@ -8,6 +8,8 @@ library(readxl)
 library(lubridate)
 library(car)
 library(nlme)
+library(glmmTMB)
+library(emmeans)
 #library(lme4)
 #
 #
@@ -47,7 +49,44 @@ p <- 101.3
 #
 #
 #=======  ►   Functions     ◄ =======
-
+# From http://www.cookbook-r.com/Manipulating_data/Summarizing_data/
+## Summarizes data.
+## Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
+##   data: a data frame.
+##   measurevar: the name of a column that contains the variable to be summariezed
+##   groupvars: a vector containing names of columns that contain grouping variables
+##   na.rm: a boolean that indicates whether to ignore NA's
+##   conf.interval: the percent range of the confidence interval (default is 95%)
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  # New version of length which can handle NA's: if na.rm==T, don't count them
+  length2 <- function (x, na.rm=FALSE) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }
+  # This does the summary. For each group's data frame, return a vector with
+  # N, mean, and sd
+  datac <- plyr::ddply(data, groupvars, .drop=.drop,
+                 .fun = function(xx, col) {
+                   c(N    = length2(xx[[col]], na.rm=na.rm),
+                     mean = mean   (xx[[col]], na.rm=na.rm),
+                     sd   = sd     (xx[[col]], na.rm=na.rm),
+                     max  = max    (xx[[col]], na.rm=na.rm),
+                     min  = min    (xx[[col]], na.rm=na.rm)
+                   )
+                 },
+                 measurevar
+  )
+  # Rename the "mean" column    
+  datac <- plyr::rename(datac, c("mean" = measurevar))
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval: 
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult 
+  return(datac)
+}
 #
 #
 #
@@ -263,6 +302,112 @@ Anova(lme1, type=2)
 #
 #
 
+
+Q1_ARA %>%
+  mutate(MP = case_when(Round == 1 ~ "Sept20",
+                        Round == 2 ~ "Oct20",
+                        Round == 3 ~ "Nov20",
+                        Round == 4 ~ "Feb21",
+                        Round == 5 ~ "Mar21",
+                        Round == 6 ~ "May21",
+                        Round == 7 ~ "Jun21",
+                        Round == 8 ~ "Jul21",
+                        Round == 9 ~ "Sept21",
+                        Round == 10 ~ "Oct21",
+                        Round == 11 ~ "Nov21")) %>%
+  mutate(across(MP, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
+  ggplot(aes(y = Et_prod_umol_h_m2, x = MP)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
+
+
+
+# Au
+modelAu <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Au",], ziformula=~1, family=gaussian)
+Anova(modelAu, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 113.6 10  < 2.2e-16 
+emmeans(modelAu,"Round")
+#
+#
+# Di
+modelDi <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
+Anova(modelDi, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 202.97 10  < 2.2e-16
+emmeans(modelDi,"Round")
+#
+#
+# Hy
+modelHy <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
+Anova(modelHy, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 249.08 10  < 2.2e-16
+emmeans(modelHy,"Round")
+#
+#
+# Pl
+modelPl <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Pl",], ziformula=~1, family=gaussian)
+Anova(modelPl, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 182.64 10  < 2.2e-16
+emmeans(modelPl,"Round")
+#
+#
+# Po
+modelPo <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Po",], ziformula=~1, family=gaussian)
+Anova(modelPo, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 215.56 10  < 2.2e-16
+emmeans(modelPo,"Round")
+#
+#
+# Pti
+modelPti <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Pti",], ziformula=~1, family=gaussian)
+Anova(modelPti, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 53.974 10  4.906e-08
+emmeans(modelPti,"Round")
+#
+#
+# Ra
+modelRa <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Ra",], ziformula=~1, family=gaussian)
+Anova(modelRa, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 40.684 10  1.283e-05
+emmeans(modelRa,"Round")
+#
+#
+# S
+modelS <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="S",], ziformula=~1, family=gaussian)
+Anova(modelS, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 35.241 10  0.0001136
+emmeans(modelS,"Round")
+#
+#
+# Sf
+modelSf <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Sf",], ziformula=~1, family=gaussian)
+Anova(modelSf, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 81.666 10  2.366e-13
+emmeans(modelSf,"Round")
+#
+#
+# Sli
+modelSli <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Sli",], ziformula=~1, family=gaussian)
+Anova(modelSli, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 161.95 10  < 2.2e-16
+emmeans(modelSli,"Round")
+#
+#
+
+
+
+
+
+x <- summarySE(Q1_ARA, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
+
+
 #
 #
 #
@@ -293,9 +438,29 @@ field_ARA_wide.5 %>%
                         Round == 8 ~ "Jul21",
                         Round == 9 ~ "Sept21",
                         Round == 10 ~ "Oct21",
-                        Round == 11 ~ "Nov21")) %>%
-  ggplot(aes(x = factor(MP, level=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")), y = Et_prod_umol_h_m2)) + geom_boxplot() + facet_wrap(~Species, scales = "free", ncol = 3)
-
+                        Round == 11 ~ "Nov21"),
+         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+                             Species == "Di" ~ "Dicranum scoparium",
+                             Species == "Hy" ~ "Hylocomium splendens",
+                             Species == "Pl" ~ "Pleurozium schreberi",
+                             Species == "Po" ~ "Polytrichum commune",
+                             Species == "Pti" ~ "Ptilidium ciliare",
+                             Species == "Ra" ~ "Racomitrium lanuginosum",
+                             Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species)) %>%
+  mutate(across(MP, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
+  summarise(meanEt_pro = mean(Et_prod_umol_h_m2, na.rm = TRUE), se = sd(Et_prod_umol_h_m2)/sqrt(length(Et_prod_umol_h_m2)), .by = c(MP, Species)) %>%
+  ggplot() +
+  geom_errorbar(aes(x = MP, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
+  geom_col(aes(x = MP, y = meanEt_pro), color = "black") + 
+  facet_wrap(~Species, scales = "free", ncol = 2) +
+  labs(x = "Measuring period (MP)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Moss ethylene production")) + 
+  theme_classic(base_size = 15) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+  
+  
 #
 #
 #
