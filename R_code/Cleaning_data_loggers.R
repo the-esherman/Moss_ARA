@@ -5,6 +5,7 @@
 #
 #
 #=======  ♣   Libraries     ♣ =======
+library(plotly)
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -156,12 +157,74 @@ write_csv(TinyTag_wetland.2, "Data_clean/AirT_wetland.csv", na = "NA")
 #    P3: 5TM - Y
 #    P4: 5TM
 #    P5: 5TM - R
-# ═══════════════════════════════════╗
-#                                    ▼
-Heath1 <- read_xls("Data_raw/Loggers/.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
 #
-Heath1.loaded <- Heath1
-Heath1 <- Heath1.loaded
+heath1_path <- "Data_raw/Loggers/EM50/Heath1/"
+heath1_folder <- dir(heath1_path)
+
+heath1_list <- list()
+
+for (file in heath1_folder){
+  
+  # Load data: all 5TM soil temperature/moisture sensors
+  heath1_data <- read_xls(paste(heath1_path,file, sep = ""), col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+  
+  # Retain only port 1, 3, 5
+  heath1_data <- heath1_data[c(1:3,6:7,10:11)]
+  
+  # Add file id to new column
+  heath1_data$id <- substr(file,1,20)
+  
+  # Name each file uniquely, based on filename. Add to list
+  heath1_list[[substr(file,1,20)]] <- heath1_data
+  
+  rm(heath1_data)
+}
+
+
+Heath1_all <- heath1_list %>% reduce(full_join, by = "Date_time")
+
+
+# What is this?
+Heath1 <- heath1_list[["[Field Heath 1 20220"]] %>%
+  separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
+  separate(Time, sep = ":", into = c("hour", "min", "sec")) %>%
+  separate(Date, sep = "-", into = c("Year", "Month", "Day")) %>%
+  filter((Year == "2020" 
+          & ((Month == "08" & (Day == "29" | Day == "30" | Day == "31"))
+             | Month == "09" 
+             | Month == "10" 
+             | Month == "11" 
+             | Month == "12"
+          )
+  ) 
+  | Year == "2021" 
+  | (Year == "2022" 
+     & (Month == "01" 
+        | Month == "02" 
+        | Month == "03" 
+        | Month == "04" 
+        #| Month == "05" 
+        #| Month == "06" 
+        #| Month == "07" 
+        #| Month == "08" 
+        #| Month == "09"
+     )
+  )
+  )
+
+
+
+
+
+
+
+all_heath1 <- do.call(rbind, heath1_list)
+
+
+
+
+
+
 #
 Heath1 <- Heath1 %>%
   separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
