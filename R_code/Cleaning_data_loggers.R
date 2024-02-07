@@ -158,64 +158,20 @@ write_csv(TinyTag_wetland.2, "Data_clean/AirT_wetland.csv", na = "NA")
 #    P4: 5TM
 #    P5: 5TM - R
 #
-heath1_path <- "Data_raw/Loggers/EM50/Heath1/"
-heath1_folder <- dir(heath1_path)
-
-heath1_list <- list()
-
-for (file in heath1_folder){
-  
-  # Load data: all 5TM soil temperature/moisture sensors
-  heath1_data <- read_xls(paste(heath1_path,file, sep = ""), col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
-  
-  # Retain only port 1, 3, 5
-  heath1_data <- heath1_data[c(1:3,6:7,10:11)]
-  
-  # Add file id to new column
-  heath1_data$id <- substr(file,1,20)
-  
-  # Name each file uniquely, based on filename. Add to list
-  heath1_list[[substr(file,1,20)]] <- heath1_data
-  
-  rm(heath1_data)
-}
-
-
-# Heath1_all <- heath1_list %>% reduce(full_join, by = "Date_time")
-# all_heath1 <- do.call(rbind, heath1_list)
-
-
-
-# Only need two files:
+# Load data files
 # EM3075
-Heath1_3jun21 <- heath1_list[["EM3075 3Jun21-1336.x"]] %>%
+Heath1_3jun21 <- read_xls("Data_raw/Loggers/EM50/Heath1/EM3075 3Jun21-1336.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  select(1:3, 6:7, 10:11) %>%
   filter(Date_time >= ymd_hm("2020-08-28 19:00")) 
+#
 # EM14979
-Heath1_30nov21 <- heath1_list[["[Field Heath 1 20220"]] %>%
+Heath1_21sep22 <- read_xls("Data_raw/Loggers/EM50/Heath1/[Field Heath 1 20220916]EM14979 21sep22-1014.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  select(1:3, 6:7, 10:11) %>%
   filter(Date_time >= ymd_hm("2021-06-02 18:00"),
-         Date_time <= ymd_hm("2022-09-16 14:00")) 
-
-Heath1 <- bind_rows(Heath1_3jun21, Heath1_30nov21)
-
-# Plot diel temperature of each sensor or average of sensors
-Heath1 %>%
-  separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
-  group_by(ymd(Date)) %>%
-  summarise(Soil_moist1 = mean(Soil_moist1, na.rm = TRUE),
-            Soil_temp1 = mean(Soil_temp1, na.rm = TRUE),
-            Soil_moist3 = mean(Soil_moist3, na.rm = TRUE),
-            Soil_temp3 = mean(Soil_temp3, na.rm = TRUE),
-            Soil_moist5 = mean(Soil_moist5, na.rm = TRUE),
-            Soil_temp5 = mean(Soil_temp5, na.rm = TRUE),
-            .groups = "keep") %>%
-  rename("Date" = "ymd(Date)") %>%
-  #mutate(Soil_temp = mean(c(Soil_temp1, Soil_temp3, Soil_temp5), na.rm = TRUE)) %>%
-  ungroup() %>%
-  #ggplot(aes(Date, Soil_temp)) + geom_point()
-  select(1,3,5,7) %>%
-  pivot_longer(c(Soil_temp1, Soil_temp3, Soil_temp5), names_to = "Sensor", values_to = "Soil_temp") %>%
-  #pivot_longer(c(Soil_moist1, Soil_moist3, Soil_moist5), names_to = "Sensor2", values_to = "Soil_moist") %>%
-  ggplot(aes(Date, Soil_temp, shape = Sensor)) + geom_point()
+         Date_time <= ymd_hm("2022-09-16 14:00"))
+#
+# Combine
+Heath1 <- bind_rows(Heath1_3jun21, Heath1_21sep22)
 #
 #
 #   # Heathland 2 #
@@ -233,25 +189,6 @@ Heath2 <- read_xls("Data_raw/Loggers/EM50/Heath2/[Field Heath 2 20220916]EM14980
          Date_time <= ymd_hm("2022-04-30 23:00"))
 #
 #
-# Plot diel temperature of each sensor or average of sensors
-Heath2 %>%
-  separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
-  group_by(ymd(Date)) %>%
-  summarise(Soil_moist1 = mean(Soil_moist1, na.rm = TRUE),
-            Soil_temp1 = mean(Soil_temp1, na.rm = TRUE),
-            Soil_moist5 = mean(Soil_moist5, na.rm = TRUE),
-            Soil_temp5 = mean(Soil_temp5, na.rm = TRUE),
-            .groups = "keep") %>%
-  rename("Date" = "ymd(Date)") %>%
-  #mutate(Soil_temp = mean(c(Soil_temp1, Soil_temp3, Soil_temp5), na.rm = TRUE)) %>%
-  ungroup() %>%
-  #ggplot(aes(Date, Soil_temp)) + geom_point()
-  select(1,3,5) %>%
-  pivot_longer(c(Soil_temp1, Soil_temp5), names_to = "Sensor", values_to = "Soil_temp") %>%
-  #pivot_longer(c(Soil_moist1, Soil_moist3, Soil_moist5), names_to = "Sensor2", values_to = "Soil_moist") %>%
-  ggplot(aes(Date, Soil_temp, shape = Sensor)) + geom_point()
-#
-#
 #   # Heathland 3 #
 #    Sensors:
 #    P1: 5TM - G
@@ -264,36 +201,6 @@ Heath2 %>%
 Heath3 <- read_xls("Data_raw/Loggers/EM50/Heath3/[Field Heath 3 20220916]EM14973 22sep22-1658.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "PAR"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
   filter(Date_time >= ymd_hm("2020-08-28 19:00"),
          Date_time <= ymd_hm("2022-09-16 14:00"))
-#
-#
-# Plot diel temperature of each sensor or average of sensors
-Heath3 %>%
-  separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
-  group_by(ymd(Date)) %>%
-  summarise(Soil_moist1 = mean(Soil_moist1, na.rm = TRUE),
-            Soil_temp1 = mean(Soil_temp1, na.rm = TRUE),
-            Soil_moist2 = mean(Soil_moist2, na.rm = TRUE),
-            Soil_temp2 = mean(Soil_temp2, na.rm = TRUE),
-            Soil_moist3 = mean(Soil_moist3, na.rm = TRUE),
-            Soil_temp3 = mean(Soil_temp3, na.rm = TRUE),
-            Soil_moist4 = mean(Soil_moist4, na.rm = TRUE),
-            Soil_temp4 = mean(Soil_temp4, na.rm = TRUE),
-            PAR = mean(PAR, na.rm = TRUE),
-            .groups = "keep") %>%
-  rename("Date" = "ymd(Date)") %>%
-  #mutate(Soil_temp = mean(c(Soil_temp1, Soil_temp3, Soil_temp5), na.rm = TRUE)) %>%
-  ungroup() %>%
-  #ggplot(aes(Date, Soil_temp)) + geom_point()
-  select(1,3,5,7,9) %>%
-  pivot_longer(c(Soil_temp1, Soil_temp2, Soil_temp3, Soil_temp4), names_to = "Sensor", values_to = "Soil_temp") %>%
-  #pivot_longer(c(Soil_moist1, Soil_moist3, Soil_moist5), names_to = "Sensor2", values_to = "Soil_moist") %>%
-  ggplot(aes(Date, Soil_temp, shape = Sensor)) + geom_point()
-
-
-
-
-
-
 #
 #
 #   # Heathland 4 #
@@ -311,35 +218,6 @@ Heath4 <- read_xls("Data_raw/Loggers/EM50/Heath4/[Field Heath 4 20220916]EM14991
          Date_time <= ymd_hm("2022-09-16 14:00"))
 #
 #
-# Plot diel temperature of each sensor or average of sensors
-Heath4 %>%
-  separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
-  group_by(ymd(Date)) %>%
-  summarise(Soil_moist1 = mean(Soil_moist1, na.rm = TRUE),
-            Soil_temp1 = mean(Soil_temp1, na.rm = TRUE),
-            Soil_moist2 = mean(Soil_moist2, na.rm = TRUE),
-            Soil_temp2 = mean(Soil_temp2, na.rm = TRUE),
-            Soil_moist3 = mean(Soil_moist3, na.rm = TRUE),
-            Soil_temp3 = mean(Soil_temp3, na.rm = TRUE),
-            Soil_moist4 = mean(Soil_moist4, na.rm = TRUE),
-            Soil_temp4 = mean(Soil_temp4, na.rm = TRUE),
-            .groups = "keep") %>%
-  rename("Date" = "ymd(Date)") %>%
-  #mutate(Soil_temp = mean(c(Soil_temp1, Soil_temp3, Soil_temp5), na.rm = TRUE)) %>%
-  ungroup() %>%
-  #ggplot(aes(Date, Soil_temp)) + geom_point()
-  select(1,3,5,7,9) %>%
-  pivot_longer(c(Soil_temp1, Soil_temp2, Soil_temp3, Soil_temp4), names_to = "Sensor", values_to = "Soil_temp") %>%
-  #pivot_longer(c(Soil_moist1, Soil_moist3, Soil_moist5), names_to = "Sensor2", values_to = "Soil_moist") %>%
-  ggplot(aes(Date, Soil_temp, shape = Sensor)) + geom_point()
-
-
-
-
-
-
-#
-#
 #   # Wetland 1 #
 #    Sensors:
 #    P1: 5TM - B (wet)
@@ -353,8 +231,6 @@ Wetland1 <- read_xls("Data_raw/Loggers/EM50/Wetland1/[Field Wetland 1 20220929]E
   select(1:5, 8:11) %>%
   filter(Date_time >= ymd_hm("2020-08-28 17:00"),
          Date_time <= ymd_hm("2022-09-29 9:00"))
-
-
 #
 #
 #   # Wetland 2 #
@@ -370,8 +246,6 @@ Wetland2 <- read_xls("Data_raw/Loggers/EM50/Wetland2/[Field Wetland 2 20220929]E
   select(1:10) %>%
   filter(Date_time >= ymd_hm("2020-08-28 18:00"),
          Date_time <= ymd_hm("2022-09-29 9:00"))
-
-
 #
 #
 #   # Wetland 3 #
@@ -393,69 +267,7 @@ Wetland3 <- read_xls("Data_raw/Loggers/EM50/Wetland3/[Field Wetland 3 20220929]]
 
 
 
-heath2_path <- "Data_raw/Loggers/EM50/Heath3/"
-heath2_folder <- dir(heath2_path)
 
-heath2_list <- list()
-
-for (file in heath2_folder){
-  
-  # Load data: all 5TM soil temperature/moisture sensors
-  heath2_data <- read_xls(paste(heath2_path,file, sep = ""), col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
-  
-  # Retain only port 1, 5
-  heath2_data <- heath2_data[c(1:3,10:11)]
-  
-  # Add file id to new column
-  heath2_data$id <- substr(file,1,20)
-  
-  # Name each file uniquely, based on filename. Add to list
-  heath2_list[[substr(file,1,20)]] <- heath2_data
-  
-  rm(heath2_data)
-}
-
-
-
-
-# ═══════════════════════════════════╗
-#                                    ▼
-Heath4 <- read_xls("Data_raw/Loggers/[Field Heath 4 20220916]EM14991 22sep22-1640.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
-#
-Heath4.loaded <- Heath4
-Heath4 <- Heath4.loaded
-#
-Heath4 <- Heath4 %>%
-  separate(Date_time, sep = " ", into = c("Date", "Time")) %>%
-  separate(Time, sep = ":", into = c("hour", "min", "sec")) %>%
-  separate(Date, sep = "-", into = c("Year", "Month", "Day")) %>%
-  filter((Year == "2020" 
-          & (Month == "09"
-             | Month == "10" 
-             | Month == "11" 
-             | Month == "12"
-          )
-  ) 
-  | Year == "2021" 
-  | (Year == "2022" 
-     & (Month == "01" 
-        | Month == "02" 
-        | Month == "03" 
-        | Month == "04" 
-        #| Month == "05" 
-        #| Month == "06" 
-        #| Month == "07" 
-        #| Month == "08" 
-        #| Month == "09"
-     )
-  )
-  )
-Heath4.NAcol <-names(Heath4)[sapply(Heath4, function(x) sum(is.na(x)) == length(x))] # Columns with only NA
-Heath4.x <- Heath4 %>%
-  select(-Heath4.NAcol)
-#unite(hour, min, col = "Time", sep = ":") %>%
-#unite(Date, Time, col = "Day_ID", sep = " ")
-#
 
 
 
