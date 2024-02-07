@@ -17,3 +17,4 @@ export/*
 # Some R files of old. Not sure if I want to commit. If cleaned up
 R_code/Load_data_ARA.R
 R_code/Plots_ARA.R
+R_code/Removed_cleaning_data.R
