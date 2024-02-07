@@ -346,13 +346,46 @@ Heath4 %>%
 #    P2: 5TM - B (Sf, extra plot)
 #    P3: 5TM
 #    P4: 5TM - Y (wet)
-#    P5: 5TM - Y (dry)
+#    P5: 5TM - Y
 #
 # Load data file
+Wetland1 <- read_xls("Data_raw/Loggers/EM50/Wetland1/[Field Wetland 1 20220929]EM4304 4okt22-1641.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  select(1:5, 8:11) %>%
+  filter(Date_time >= ymd_hm("2020-08-28 17:00"),
+         Date_time <= ymd_hm("2022-09-29 9:00"))
 
 
+#
+#
+#   # Wetland 2 #
+#    Sensors:
+#    P1: 5TM - W
+#    P2: 5TM - W (wet)
+#    P3: PAR
+#    P4: 5TM - P (wet)
+#    P5: 5TM - P
+#
+# Load data file
+Wetland2 <- read_xls("Data_raw/Loggers/EM50/Wetland2/[Field Wetland 2 20220929]EM4305 4okt22-1721.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "PAR", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  select(1:10) %>%
+  filter(Date_time >= ymd_hm("2020-08-28 18:00"),
+         Date_time <= ymd_hm("2022-09-29 9:00"))
 
 
+#
+#
+#   # Wetland 3 #
+#    Sensors:
+#    P1: 5TM - G
+#    P2: 5TM - G (S)
+#    P3: 5TM - G (Sf)
+#    P4: 5TM - G (Sli)
+#    P5: 5TM - R
+#
+# Load data file
+Wetland3 <- read_xls("Data_raw/Loggers/EM50/Wetland3/[Field Wetland 3 20220929]]EM14982 4okt22-1702.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  select(1:11) %>%
+  filter(Date_time >= ymd_hm("2020-08-28 18:00"))
 
 
 
