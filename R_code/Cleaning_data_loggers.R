@@ -173,6 +173,25 @@ Heath1_21sep22 <- read_xls("Data_raw/Loggers/EM50/Heath1/[Field Heath 1 20220916
 # Combine
 Heath1 <- bind_rows(Heath1_3jun21, Heath1_21sep22)
 #
+Heath1 <- Heath1 %>%
+  rename("Soil_moisture_B" = Soil_moist1,
+         "Soil_temperature_B" = Soil_temp1,
+         "Soil_moisture_Y" = Soil_moist3,
+         "Soil_temperature_Y" = Soil_temp3,
+         "Soil_moisture_R" = Soil_moist5,
+         "Soil_temperature_R" = Soil_temp5) %>%
+  # Convert to UTC+1
+  mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 14:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2020-12-07 14:00:00") & Soil_temperature_B <= -2.25 ~ Date_time-hours(1),
+                               # New logger installed, weird format, seems to be DST+1 (UTC+3)
+                               Date_time > ymd_hms("2021-06-01 1:00:00") & Date_time < ymd_hms("2021-07-09 17:00:00") ~ Date_time-hours(2),
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_B < 16 ~ Date_time-hours(2),
+                               # Back to regular DST (UTC+2)
+                               Date_time > ymd_hms("2021-07-09 17:00:00") & Date_time < ymd_hms("2021-11-30 11:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_B >= 16 ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2021-11-30 11:00:00") & Soil_moisture_Y >= 0.143 ~ Date_time-hours(1),
+                               TRUE ~ Date_time))
+#
 #
 #   # Heathland 2 #
 #    Sensors:
@@ -188,6 +207,12 @@ Heath2 <- read_xls("Data_raw/Loggers/EM50/Heath2/[Field Heath 2 20220916]EM14980
   filter(Date_time >= ymd_hm("2020-08-28 19:00"),
          Date_time <= ymd_hm("2022-04-30 23:00"))
 #
+Heath2 <- Heath2 %>%
+  rename("Soil_moisture_P" = Soil_moist1,
+         "Soil_temperature_P" = Soil_temp1,
+         "Soil_moisture_W" = Soil_moist5,
+         "Soil_temperature_W" = Soil_temp5)
+#
 #
 #   # Heathland 3 #
 #    Sensors:
@@ -201,6 +226,16 @@ Heath2 <- read_xls("Data_raw/Loggers/EM50/Heath2/[Field Heath 2 20220916]EM14980
 Heath3 <- read_xls("Data_raw/Loggers/EM50/Heath3/[Field Heath 3 20220916]EM14973 22sep22-1658.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "PAR"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
   filter(Date_time >= ymd_hm("2020-08-28 19:00"),
          Date_time <= ymd_hm("2022-09-16 14:00"))
+#
+Heath3 <- Heath3 %>%
+  rename("Soil_moisture_G" = Soil_moist1,
+         "Soil_temperature_G" = Soil_temp1,
+         "Soil_moisture_Ra" = Soil_moist2,
+         "Soil_temperature_Ra" = Soil_temp2,
+         "Soil_moisture_Au" = Soil_moist3,
+         "Soil_temperature_Au" = Soil_temp3,
+         "Soil_moisture_Hy" = Soil_moist4,
+         "Soil_temperature_Hy" = Soil_temp4)
 #
 #
 #   # Heathland 4 #
@@ -216,6 +251,27 @@ Heath4 <- read_xls("Data_raw/Loggers/EM50/Heath4/[Field Heath 4 20220916]EM14991
   select(1:9) %>%
   filter(Date_time >= ymd_hm("2020-08-28 19:00"), # No sensors logging before 09-01 18:00
          Date_time <= ymd_hm("2022-09-16 14:00"))
+#
+Heath4 <- Heath4 %>%
+  rename("Soil_moisture_Di" = Soil_moist1,
+         "Soil_temperature_Di" = Soil_temp1,
+         "Soil_moisture_Pti" = Soil_moist2,
+         "Soil_temperature_Pti" = Soil_temp2,
+         "Soil_moisture_Pl" = Soil_moist3,
+         "Soil_temperature_Pl" = Soil_temp3,
+         "Soil_moisture_Po" = Soil_moist4,
+         "Soil_temperature_Po" = Soil_temp4)
+#
+#
+#   # Combine Heathland #
+Heath <- full_join(Heath1, Heath2, by = "Date_time")
+
+
+test <- Heath1 %>%
+  group_by(Date_time) %>%
+  filter(n()>1)
+
+
 #
 #
 #   # Wetland 1 #
