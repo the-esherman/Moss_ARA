@@ -183,14 +183,19 @@ Heath1 <- Heath1 %>%
   # Convert to UTC+1
   mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 14:00:00") ~ Date_time-hours(1),
                                Date_time == ymd_hms("2020-12-07 14:00:00") & Soil_temperature_B <= -2.25 ~ Date_time-hours(1),
-                               # New logger installed, weird format, seems to be DST+1 (UTC+3)
-                               Date_time > ymd_hms("2021-06-01 1:00:00") & Date_time < ymd_hms("2021-07-09 17:00:00") ~ Date_time-hours(2),
-                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_B < 16 ~ Date_time-hours(2),
+                               # New logger installed in DST
+                               Date_time >= ymd_hms("2021-06-01 1:00:00") & Date_time < ymd_hms("2021-07-09 17:00:00") ~ Date_time-hours(1),
+                               # Red laptop used, mistake in time => duplicate hour!
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_B == 16 ~ as.Date(NA),
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_B < 16 ~ Date_time-hours(1),
                                # Back to regular DST (UTC+2)
                                Date_time > ymd_hms("2021-07-09 17:00:00") & Date_time < ymd_hms("2021-11-30 11:00:00") ~ Date_time-hours(1),
-                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_B >= 16 ~ Date_time-hours(1),
                                Date_time == ymd_hms("2021-11-30 11:00:00") & Soil_moisture_Y >= 0.143 ~ Date_time-hours(1),
-                               TRUE ~ Date_time))
+                               TRUE ~ Date_time)) %>%
+  filter(!is.na(Date_time))
+#
+# Note that because of using another laptop in downloading data, it seems an extra measurement was introduced in July 2021. This measurement should be deleted.
+# The red laptop, as it is not connected to the internet, has its time slightly off, possibly, which means connecting shortly (16:58) before 17:00 on July 9th meant that it redid the same measurement hour, throwing the entire sequence off by one hour. This applies to multiple loggers, if they were downloaded  slightly before the hour according to that laptop!
 #
 #
 #   # Heathland 2 #
@@ -211,7 +216,15 @@ Heath2 <- Heath2 %>%
   rename("Soil_moisture_P" = Soil_moist1,
          "Soil_temperature_P" = Soil_temp1,
          "Soil_moisture_W" = Soil_moist5,
-         "Soil_temperature_W" = Soil_temp5)
+         "Soil_temperature_W" = Soil_temp5) %>%
+  # Convert to UTC+1
+  mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 13:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2020-12-07 13:00:00") & Soil_temperature_P >= -2.25  ~ Date_time-hours(1),
+                               Date_time > ymd_hms("2021-06-01 16:00:00") & Date_time < ymd_hms("2021-11-30 11:00:00") ~ Date_time-hours(1),
+                               TRUE ~ Date_time))
+# 2021-11-30 11:00 -> 2021-11-30 10:00
+# But two identical values, so refer to specific location. If length of dataset changes, remember to change location, otherwise it will not shift!
+Heath2$Date_time[11009] <- Heath2$Date_time[11009]-hours(1)
 #
 #
 #   # Heathland 3 #
@@ -235,7 +248,25 @@ Heath3 <- Heath3 %>%
          "Soil_moisture_Au" = Soil_moist3,
          "Soil_temperature_Au" = Soil_temp3,
          "Soil_moisture_Hy" = Soil_moist4,
-         "Soil_temperature_Hy" = Soil_temp4)
+         "Soil_temperature_Hy" = Soil_temp4) %>%
+  # Convert to UTC+1
+  mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 14:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2020-12-07 14:00:00") & Soil_temperature_G <= -3.4 ~ Date_time-hours(1),
+                               Date_time >= ymd_hms("2021-06-02 18:00:00") & Date_time < ymd_hms("2021-07-09 17:00:00") ~ Date_time-hours(1),
+                               # Red laptop used, mistake in time => duplicate hour!
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_G >= 13.8 ~ as.Date(NA),
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_G <= 13.8 ~ Date_time-hours(1),
+                               Date_time > ymd_hms("2021-07-09 17:00:00") & Date_time < ymd_hms("2021-12-01 10:00:00") ~ Date_time-hours(1),
+                               TRUE ~ Date_time))
+# 2021-11-30 10:00 -> 2021-11-30 9:00
+# But two identical values, so refer to specific location. If length of dataset changes, remember to change location, otherwise it will not shift!
+Heath3$Date_time[11033] <- Heath3$Date_time[11033]-hours(1)
+# Remove the extra time measurement in July
+Heath3 <- Heath3  %>%
+  filter(!is.na(Date_time))
+#
+# Note that because of using another laptop in downloading data, it seems an extra measurement was introduced in July 2021. This measurement should be deleted.
+# The red laptop, as it is not connected to the internet, has its time slightly off, possibly, which means connecting shortly (16:58) before 17:00 on July 9th meant that it redid the same measurement hour, throwing the entire sequence off by one hour. This applies to multiple loggers, if they were downloaded  slightly before the hour according to that laptop!
 #
 #
 #   # Heathland 4 #
@@ -249,7 +280,7 @@ Heath3 <- Heath3 %>%
 # Load data file
 Heath4 <- read_xls("Data_raw/Loggers/EM50/Heath4/[Field Heath 4 20220916]EM14991 22sep22-1640.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
   select(1:9) %>%
-  filter(Date_time >= ymd_hm("2020-08-28 19:00"), # No sensors logging before 09-01 18:00
+  filter(Date_time >= ymd_hm("2020-08-28 18:00"), # No sensors logging before 09-01 18:00
          Date_time <= ymd_hm("2022-09-16 14:00"))
 #
 Heath4 <- Heath4 %>%
@@ -260,18 +291,32 @@ Heath4 <- Heath4 %>%
          "Soil_moisture_Pl" = Soil_moist3,
          "Soil_temperature_Pl" = Soil_temp3,
          "Soil_moisture_Po" = Soil_moist4,
-         "Soil_temperature_Po" = Soil_temp4)
+         "Soil_temperature_Po" = Soil_temp4) %>%
+  # Convert to UTC+1
+  mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 14:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2020-12-07 14:00:00") & Soil_temperature_Pl <= -4 ~ Date_time-hours(1),
+                               Date_time >= ymd_hms("2021-06-02 17:00:00") & Date_time < ymd_hms("2021-07-09 17:00:00") ~ Date_time-hours(1),
+                               # Red laptop used, mistake in time => duplicate hour!
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_Pl >= 21 ~ as.Date(NA),
+                               Date_time == ymd_hms("2021-07-09 17:00:00") & Soil_temperature_Pl <= 21 ~ Date_time-hours(1),
+                               Date_time > ymd_hms("2021-07-09 17:00:00") & Date_time < ymd_hms("2021-11-30 11:00:00") ~ Date_time-hours(1),
+                               TRUE ~ Date_time))
+# 2021-11-30 11:00 -> 2021-11-30 10:00
+# But two identical values, so refer to specific location. If length of dataset changes, remember to change location, otherwise it will not shift!
+Heath4$Date_time[11011] <- Heath4$Date_time[11011]-hours(1)
+# Remove the extra time measurement in July
+Heath4 <- Heath4 %>%
+  filter(!is.na(Date_time))
+#
+# Note that because of using another laptop in downloading data, it seems an extra measurement was introduced in July 2021. This measurement should be deleted.
+# The red laptop, as it is not connected to the internet, has its time slightly off, possibly, which means connecting shortly (16:58) before 17:00 on July 9th meant that it redid the same measurement hour, throwing the entire sequence off by one hour. This applies to multiple loggers, if they were downloaded  slightly before the hour according to that laptop!
 #
 #
 #   # Combine Heathland #
-Heath <- full_join(Heath1, Heath2, by = "Date_time")
+Heath <- tibble(seq(from = ymd_hms('2020-08-28 17:00:00'), to = ymd_hms('2022-09-16 14:00:00'), by='hours')) %>%
+  rename("Date_time" = "seq(...)")
 
-
-test <- Heath1 %>%
-  group_by(Date_time) %>%
-  filter(n()>1)
-
-
+Heath <- reduce(list(Heath, Heath1, Heath2, Heath3, Heath4), left_join, by = "Date_time")
 #
 #
 #   # Wetland 1 #
@@ -319,11 +364,22 @@ Wetland3 <- read_xls("Data_raw/Loggers/EM50/Wetland3/[Field Wetland 3 20220929]]
 
 
 
+#   # Combine Wetland #
+Wetland <- tibble(seq(from = ymd_hms('2020-08-28 17:00:00'), to = ymd_hms('2022-09-16 14:00:00'), by='hours')) %>%
+  rename("Date_time" = "seq(...)")
+
+Wetland <- reduce(list(Wetland, Wetland1, Wetland2, Wetland3), left_join, by = "Date_time")
 
 
 
-
-
+#
+# CAREFUL!
+1
+#
+#
+# Save Heathland and Wetland logger data
+write_csv(Heath, "Data_clean/Heath_EM50.csv", na = "NA")
+#write_csv(Wetland, "Data_clean/Wetland_EM50.csv", na = "NA")
 
 
 
