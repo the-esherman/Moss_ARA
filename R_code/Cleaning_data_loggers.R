@@ -315,7 +315,7 @@ Heath4 <- Heath4 %>%
 #   # Combine Heathland #
 Heath <- tibble(seq(from = ymd_hms('2020-08-28 17:00:00'), to = ymd_hms('2022-09-16 14:00:00'), by='hours')) %>%
   rename("Date_time" = "seq(...)")
-
+#
 Heath <- reduce(list(Heath, Heath1, Heath2, Heath3, Heath4), left_join, by = "Date_time")
 #
 #
@@ -333,6 +333,22 @@ Wetland1 <- read_xls("Data_raw/Loggers/EM50/Wetland1/[Field Wetland 1 20220929]E
   filter(Date_time >= ymd_hm("2020-08-28 17:00"),
          Date_time <= ymd_hm("2022-09-29 9:00"))
 #
+Wetland1 <- Wetland1 %>%
+  rename("Soil_moisture_Bwet" = Soil_moist1,
+         "Soil_temperature_Bwet" = Soil_temp1,
+         "Soil_moisture_B" = Soil_moist2,
+         "Soil_temperature_B" = Soil_temp2,
+         "Soil_moisture_Ywet" = Soil_moist4,
+         "Soil_temperature_Ywet" = Soil_temp4,
+         "Soil_moisture_Y" = Soil_moist5,
+         "Soil_temperature_Y" = Soil_temp5) %>%
+  # Convert to UTC+1
+  mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 13:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2020-12-07 13:00:00") & Soil_temperature_Ywet >= -1 ~ Date_time-hours(1),
+                               Date_time >= ymd_hms("2021-06-03 10:00:00") & Date_time < ymd_hms("2021-12-01 10:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2021-12-01 10:00:00") & Soil_moisture_Y >= 0.295 ~ Date_time-hours(1),
+                               TRUE ~ Date_time))
+#
 #
 #   # Wetland 2 #
 #    Sensors:
@@ -348,6 +364,22 @@ Wetland2 <- read_xls("Data_raw/Loggers/EM50/Wetland2/[Field Wetland 2 20220929]E
   filter(Date_time >= ymd_hm("2020-08-28 18:00"),
          Date_time <= ymd_hm("2022-09-29 9:00"))
 #
+Wetland2 <- Wetland2 %>%
+  rename("Soil_moisture_W" = Soil_moist1,
+         "Soil_temperature_W" = Soil_temp1,
+         "Soil_moisture_Wwet" = Soil_moist2,
+         "Soil_temperature_Wwet" = Soil_temp2,
+         "Soil_moisture_Pwet" = Soil_moist4,
+         "Soil_temperature_Pwet" = Soil_temp4,
+         "Soil_moisture_P" = Soil_moist5,
+         "Soil_temperature_P" = Soil_temp5) %>%
+  # Convert to UTC+1
+  mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 13:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2020-12-07 13:00:00") & Soil_temperature_P >= -1.9 ~ Date_time-hours(1),
+                               Date_time >= ymd_hms("2021-06-03 10:00:00") & Date_time < ymd_hms("2021-12-01 10:00:00") ~ Date_time-hours(1),
+                               Date_time == ymd_hms("2021-12-01 10:00:00") & is.na(Soil_temperature_W) ~ Date_time-hours(1),
+                               TRUE ~ Date_time))
+#
 #
 #   # Wetland 3 #
 #    Sensors:
@@ -361,15 +393,35 @@ Wetland2 <- read_xls("Data_raw/Loggers/EM50/Wetland2/[Field Wetland 2 20220929]E
 Wetland3 <- read_xls("Data_raw/Loggers/EM50/Wetland3/[Field Wetland 3 20220929]]EM14982 4okt22-1702.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "Soil_moist4", "Soil_temp4", "Soil_moist5", "Soil_temp5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
   select(1:11) %>%
   filter(Date_time >= ymd_hm("2020-08-28 18:00"))
-
-
-
+#
+Wetland3 <- Wetland3 %>%
+  rename("Soil_moisture_G" = Soil_moist1,
+         "Soil_temperature_G" = Soil_temp1,
+         "Soil_moisture_S" = Soil_moist2,
+         "Soil_temperature_S" = Soil_temp2,
+         "Soil_moisture_Sf" = Soil_moist3,
+         "Soil_temperature_Sf" = Soil_temp3,
+         "Soil_moisture_Sli" = Soil_moist4,
+         "Soil_temperature_Sli" = Soil_temp4,
+         "Soil_moisture_R" = Soil_moist5,
+         "Soil_temperature_R" = Soil_temp5) %>%
+  # Convert to UTC+1
+  mutate(Date_time = case_when(Date_time < ymd_hms("2020-12-07 13:00:00") ~ Date_time-hours(1),
+                               Date_time >= ymd_hms("2021-06-03 10:00:00") & Date_time <= ymd_hms("2021-12-01 10:00:00") ~ Date_time-hours(1),
+                               TRUE ~ Date_time))
+# 2021-12-01 10:00 -> 2021-12-01 9:00
+# But two identical values, so refer to specific location. If length of dataset changes, remember to change location, otherwise it will not shift!
+Wetland3$Date_time[2420] <- Wetland3$Date_time[2420]-hours(1)
+Wetland3 <- Wetland3 %>%
+  # A measurement is missing, because the logger was connected just before 10, so the measurement was done and next was 11, and that matched in the logger
+  add_row(tibble_row(Date_time = ymd_hms("2021-12-01 10:00:00")), .after = 11033)
+#
+#
 #   # Combine Wetland #
-Wetland <- tibble(seq(from = ymd_hms('2020-08-28 17:00:00'), to = ymd_hms('2022-09-16 14:00:00'), by='hours')) %>%
+Wetland <- tibble(seq(from = ymd_hms('2020-08-28 17:00:00'), to = ymd_hms('2022-09-29 9:00:00'), by='hours')) %>%
   rename("Date_time" = "seq(...)")
 
 Wetland <- reduce(list(Wetland, Wetland1, Wetland2, Wetland3), left_join, by = "Date_time")
-
 
 
 #
@@ -379,7 +431,7 @@ Wetland <- reduce(list(Wetland, Wetland1, Wetland2, Wetland3), left_join, by = "
 #
 # Save Heathland and Wetland logger data
 write_csv(Heath, "Data_clean/Heath_EM50.csv", na = "NA")
-#write_csv(Wetland, "Data_clean/Wetland_EM50.csv", na = "NA")
+write_csv(Wetland, "Data_clean/Wetland_EM50.csv", na = "NA")
 
 
 
