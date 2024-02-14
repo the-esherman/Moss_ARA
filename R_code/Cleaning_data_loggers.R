@@ -9,7 +9,7 @@ library(plotly)
 library(tidyverse)
 library(readxl)
 library(lubridate)
-library(hms)
+#library(hms)
 #
 #
 #
@@ -127,7 +127,7 @@ TinyTag_wetland.1 %>%
 # Separate day and time
 TinyTag_wetland.2 <- TinyTag_wetland.1 %>%
   mutate(Date = date(Tid),
-         Time = as_hms(Tid)) %>%
+         Time = hms::as_hms(Tid)) %>%
   relocate(c(Date, Time, Tid), .after = Record) %>%
   select(!c("id_file", "Date_time", "Unit", "UnitMax", "UnitMin")) %>%
   rename("Date_time" = Tid,
@@ -433,7 +433,89 @@ Wetland <- reduce(list(Wetland, Wetland1, Wetland2, Wetland3), left_join, by = "
 write_csv(Heath, "Data_clean/Heath_EM50.csv", na = "NA")
 write_csv(Wetland, "Data_clean/Wetland_EM50.csv", na = "NA")
 
+# Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
 
+
+
+
+
+# Outliers
+# Soil Temperature and moisture
+# Temperature
+Heath_temp <- Heath %>%
+  select(1,3,5,7,9,11,13,15,17,19,22,24,26,28) %>%
+  pivot_longer(cols = c(2:14), names_to = "Sensor", values_to = "Soil_temperature")
+#
+Heath_temp %>%
+  ggplot() +
+  geom_point(aes(x = Date_time, y = Soil_temperature)) + facet_wrap(~Sensor)
+#
+# Temperature per block
+plot_ly(Heath_temp, x = ~Soil_temperature_B, y = ~Date_time, name = "Blue", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
+  add_trace(x = ~Soil_temperature_P, y = ~Date_time, name = "Purple",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~Soil_temperature_R, y = ~Date_time, name = "Red",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Soil_temperature_W, y = ~Date_time, name = "White",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Soil_temperature_Y, y = ~Date_time, name = "Yellow",type = 'scatter', mode = "markers", marker = list(color = "#F0E442")) %>%
+  add_trace(x = ~Soil_temperature_G, y = ~Date_time, name = "Green",type = 'scatter', mode = "markers", marker = list(color ="black")) %>%
+  layout(title = "Soil temperature", xaxis = list(title = "Soil temperature (°C)"), margin = list(l = 100))
+#
+# Temperature per species
+plot_ly(Heath_temp, x = ~Soil_temperature_Au, y = ~Date_time, name = "Aulacomnium turgidum", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Soil_temperature_Di, y = ~Date_time, name = "Dicranum scoparium",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Soil_temperature_Hy, y = ~Date_time, name = "Hylocomium splendens",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Soil_temperature_Pl, y = ~Date_time, name = "Pleurozium schreberi",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Soil_temperature_Po, y = ~Date_time, name = "Polytrichum commune",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~Soil_temperature_Pti, y = ~Date_time, name = "Ptilidium ciliare",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Soil_temperature_Ra, y = ~Date_time, name = "Racomitrium lanuginosum",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Soil_temperature_G, y = ~Date_time, name = "Green",type = 'scatter', mode = "markers", marker = list(color ="black")) %>%
+  layout(title = "Soil moisture per species", xaxis = list(title = "Soil moisture (%vol)"), margin = list(l = 100))
+
+
+#
+# Moisture
+Heath_moist.1 <- Heath %>%
+  select(1:2,4,6,8,10,12,14,16,18,21,23,25,27) %>%
+  pivot_longer(cols = c(2:14), names_to = "Sensor", values_to = "Soil_moisture")
+
+Heath_moist.2 <- Heath %>%
+  select(1:2,4,6,8,10,12,14,16,18,21,23,25,27) %>%
+  mutate(across(c(2:14), ~ .x*100))
+
+#
+Heath_moist.1 %>%
+  ggplot() +
+  geom_point(aes(x = Date_time, y = Soil_moisture)) + facet_wrap(~Sensor)
+
+# Moisture per block
+plot_ly(Heath_moist.2, x = ~Soil_moisture_B, y = ~Date_time, name = "Blue", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
+  add_trace(x = ~Soil_moisture_P, y = ~Date_time, name = "Purple",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~Soil_moisture_R, y = ~Date_time, name = "Red",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Soil_moisture_W, y = ~Date_time, name = "White",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Soil_moisture_Y, y = ~Date_time, name = "Yellow",type = 'scatter', mode = "markers", marker = list(color = "#F0E442")) %>%
+  layout(title = "Soil moisture", xaxis = list(title = "Soil moisture (%vol)"), margin = list(l = 100))
+#
+# Moisture per species
+plot_ly(Heath_moist.2, x = ~Soil_moisture_Au, y = ~Date_time, name = "Aulacomnium turgidum", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Soil_moisture_Di, y = ~Date_time, name = "Dicranum scoparium",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Soil_moisture_Hy, y = ~Date_time, name = "Hylocomium splendens",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Soil_moisture_Pl, y = ~Date_time, name = "Pleurozium schreberi",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  add_trace(x = ~Soil_moisture_Po, y = ~Date_time, name = "Polytrichum commune",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~Soil_moisture_Pti, y = ~Date_time, name = "Ptilidium ciliare",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Soil_moisture_Ra, y = ~Date_time, name = "Racomitrium lanuginosum",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~Soil_moisture_G, y = ~Date_time, name = "Green",type = 'scatter', mode = "markers", marker = list(color ="black")) %>%
+  layout(title = "Soil moisture per species", xaxis = list(title = "Soil moisture (%vol)"), margin = list(l = 100))
+
+
+
+
+
+# Too many data points. Takes a looooooooooooong time
+# dotchart(Heath_temp$Soil_temperature, 
+#          main="Cleveland plot - Soil temperature", xlab = "Observed values", 
+#          pch = 19, color = hcl.colors(12), 
+#          labels = Heath_temp$Sensor,
+#          #groups = Heath$,
+#          gpch = 12, gcolor = 1)
 
 
 
