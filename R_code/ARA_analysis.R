@@ -1,5 +1,8 @@
-# Analysis
+# Analysis - ARA
+#
+#
 # By Emil A.S. Andersen
+#
 # 
 #=======  ♣   Libraries     ♣ =======
 library(plotly)
@@ -24,6 +27,9 @@ vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
 #
 # Air temperature
 AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
+#
+# Soil parameters
+EM50_Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
 #
 # Chamber size
 Ch_H <- 7 # Chamber height (cm) above moss surface. This needs to be changed to match each plot estimated height
@@ -98,6 +104,38 @@ AirT_wetland.1 <- AirT_wetland %>%
   select(Date, Time, AirT_C) %>%
   rename("Tid" = Time)
 
+
+EM50_Heath.1 <- EM50_Heath %>%
+  rowwise() %>%
+  mutate(Soil_moisture = mean(c(Soil_moisture_B, Soil_moisture_P, Soil_moisture_R, Soil_moisture_W, Soil_moisture_Y, Soil_moisture_G), na.rm = TRUE),
+         Soil_temperature = mean(c(Soil_temperature_B, Soil_temperature_P, Soil_temperature_R, Soil_temperature_W, Soil_temperature_Y, Soil_temperature_G), na.rm = TRUE)) %>%
+  mutate(Soil_moisture = Soil_moisture*100) %>%
+  ungroup() %>%
+  select(Date_time, Soil_moisture, Soil_temperature, PAR) %>%
+  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time"), too_few = "debug", too_many = "debug") %>%
+  mutate(Date = ymd(Date),
+         Tid = hms::as_hms(Time)) 
+
+EM50_Heath.2 <- EM50_Heath.1 %>%
+  select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
+  filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
+
+
+
+
+
+
+
+EM50_Heath.1 %>%
+  ggplot() + geom_point(aes(x = Date_time, y = Soil_moisture))
+
+EM50_Heath.1 %>%
+  ggplot() + geom_point(aes(x = Date_time, y = Soil_temperature))
+
+EM50_Heath.1 %>%
+  ggplot() + geom_point(aes(x = Date_time, y = PAR))
+
+
 #
 #
 #------- • Field data -------
@@ -111,19 +149,20 @@ field_ARA.2 <- field_ARA %>%
   mutate(Tid = hms::as_hms(Tid)) %>%
   # Combine with air temperature
   left_join(AirT_wetland.1, by = join_by(Date, Tid)) %>%
+  left_join(EM50_Heath.2, by = join_by(Date, Tid)) %>%
   # Remove temporary variables
   select(!c("Date_time", "Tid"))
 #
 # Pivot wider and combine:
 # Timestamp
 field_ARA.Time <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C)) %>%
+  select(!c(Time_nr, Date, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_moisture, Soil_temperature, PAR)) %>%
   complete(Block, Species, Time, Round) %>%
   pivot_wider(names_from = Time, values_from = Timestamp)
 #
 # Ethylene
 field_ARA.Ethyl <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Acet_conc_prC, AirT_C)) %>%
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Acet_conc_prC, AirT_C, Soil_moisture, Soil_temperature, PAR)) %>%
   complete(Block, Species, Time, Round) %>%
   pivot_wider(names_from = Time, values_from = Ethyl_conc_ppm) %>%
   rename("Ethyl_conc_ppm_T0" = T0,
@@ -136,7 +175,7 @@ field_ARA.Ethyl <- field_ARA.2 %>%
 #
 # Acetylene
 field_ARA.Acet <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, AirT_C)) %>%
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, AirT_C, Soil_moisture, Soil_temperature, PAR)) %>%
   complete(Block, Species, Time, Round) %>%
   mutate(Acet_conc_ppm = Acet_conc_prC*10000) %>%
   #mutate(Acet_conc_ppm = if_else(Acet_conc_ppm <= 0, 0, Acet_conc_ppm)) %>%
@@ -150,17 +189,56 @@ field_ARA.Acet <- field_ARA.2 %>%
          "Acet_conc_ppm_T3" = T3,
          "Acet_conc_ppm_T4" = T4)
 #
+# Use the mean of T0 and T1 for air and soil temperature and soil moisture
+#
 # Air temperature
-field_ARA.Temp <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC)) %>%
+field_ARA.AirT <- field_ARA.2 %>% 
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, Soil_moisture, Soil_temperature, PAR)) %>%
   complete(Block, Species, Time, Round) %>%
   pivot_wider(names_from = Time, values_from = AirT_C) %>%
-  select(!c(T0x, T1, T1x, T2, T3, T4)) %>%
-  rename("AirT_C" = T0)
-
+  rowwise() %>%
+  mutate(AirT_C = mean(c(T0, T1), na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(!c(T0, T0x, T1, T1x, T2, T3, T4)) #%>%
+  #rename("AirT_C" = T0)
+#
+# Soil temperature
+field_ARA.SoilT <- field_ARA.2 %>% 
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_moisture, PAR)) %>%
+  complete(Block, Species, Time, Round) %>%
+  pivot_wider(names_from = Time, values_from = Soil_temperature) %>%
+  rowwise() %>%
+  mutate(Soil_temperature = mean(c(T0,T1), na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(!c(T0, T0x, T1, T1x, T2, T3, T4)) #%>%
+  #rename("Soil_temperature" = T0)
+#
+# Soil moisture
+field_ARA.SoilM <- field_ARA.2 %>% 
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_temperature, PAR)) %>%
+  complete(Block, Species, Time, Round) %>%
+  pivot_wider(names_from = Time, values_from = Soil_moisture) %>%
+  rowwise() %>%
+  mutate(Soil_moisture = mean(c(T0,T1), na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(!c(T0, T0x, T1, T1x, T2, T3, T4)) #%>%
+  #rename("Soil_moisture" = T0)
+#
+# PAR
+field_ARA.PAR <- field_ARA.2 %>% 
+  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_temperature, Soil_moisture)) %>%
+  complete(Block, Species, Time, Round) %>%
+  pivot_wider(names_from = Time, values_from = PAR) %>%
+  rowwise() %>%
+  mutate(PAR = mean(c(T0,T1), na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(!c(T0, T0x, T1, T1x, T2, T3, T4))
 #
 # Join 
-field_ARA_wide <-  left_join(field_ARA.Time, field_ARA.Temp, by = join_by(Block, Species, Round)) %>% 
+field_ARA_wide <-  left_join(field_ARA.Time, field_ARA.AirT, by = join_by(Block, Species, Round)) %>%
+  left_join(field_ARA.SoilT, by = join_by(Block, Species, Round)) %>%
+  left_join(field_ARA.SoilM, by = join_by(Block, Species, Round)) %>%
+  left_join(field_ARA.PAR, by = join_by(Block, Species, Round)) %>%
   left_join(field_ARA.Ethyl, by = join_by(Block, Species, Round)) %>%
   left_join(field_ARA.Acet, by = join_by(Block, Species, Round))
 #
@@ -215,6 +293,12 @@ field_ARA_wide.4 <- field_ARA_wide.3 %>%
 field_ARA_wide.5 <- field_ARA_wide.4 %>%
   mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
 
+field_ARA_wide.export <- field_ARA_wide.5 %>%
+  select(Block, Species, Round, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
+  rename("AirT" = AirT_C)
+
+
+write_csv(field_ARA_wide.export, "export/Q1_ARA2.csv", na = "NA")
 
 
 ggplot(data = field_ARA_wide.5, aes(x = Et_prod_umol_h_m2)) + geom_histogram()
@@ -260,6 +344,15 @@ vial_ARA.3 %>%
 
 # ??
 #mutate(across(Timestamp, ~hm(.x)))# %>%
+#
+#
+#------- • Temperature, moisture and PAR -------
+#
+# 
+
+
+
+
 #
 #
 #
