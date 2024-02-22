@@ -112,11 +112,12 @@ TinyTag_wetland.1 <- TinyTag_wetland %>%
   filter(id_file == "w202102" | id_file == "w202108" | id_file == "w202207") %>%
   #
   # Convert to UTC+1
-  mutate(Tid = case_when(id_file == "w202102" & Date_time < ymd_hm("20201025T03:00") ~ Date_time+hours(1),
+  # A mistake was made. The entire dataset of any file saved in DST needs to be converted. If DST is wanted for specific times, use the given code.
+  mutate(Tid = case_when(#id_file == "w202102" & Date_time < ymd_hm("20201025T03:00") ~ Date_time+hours(1), # No need to change, as it is already on UTC+1
                          #id_file == "w202106" & Date_time > ymd_hm("20210328T03:00") ~ Date_time+hours(1),
-                         id_file == "w202108" & Date_time < ymd_hm("20210328T03:00") ~ Date_time-hours(1),
+                         id_file == "w202108" ~ Date_time-hours(1), # & Date_time < ymd_hm("20210328T03:00") 
                          #id_file == "w202112" & Date_time < ymd_hm("20211031T03:00") ~ Date_time+hours(1),
-                         id_file == "w202207" & Date_time > ymd_hm("20211031T03:00") & Date_time < ymd_hm("20220327T03:00") ~ Date_time-hours(1),
+                         id_file == "w202207" ~ Date_time-hours(1), # & Date_time > ymd_hm("20211031T03:00") & Date_time < ymd_hm("20220327T03:00")
                          TRUE ~ Date_time))
 #
 # Plot 
@@ -451,7 +452,7 @@ Heath_temp %>%
   geom_point(aes(x = Date_time, y = Soil_temperature)) + facet_wrap(~Sensor)
 #
 # Temperature per block
-plot_ly(Heath_temp, x = ~Soil_temperature_B, y = ~Date_time, name = "Blue", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
+plot_ly(Heath, x = ~Soil_temperature_B, y = ~Date_time, name = "Blue", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
   add_trace(x = ~Soil_temperature_P, y = ~Date_time, name = "Purple",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
   add_trace(x = ~Soil_temperature_R, y = ~Date_time, name = "Red",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Soil_temperature_W, y = ~Date_time, name = "White",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
@@ -460,7 +461,7 @@ plot_ly(Heath_temp, x = ~Soil_temperature_B, y = ~Date_time, name = "Blue", type
   layout(title = "Soil temperature", xaxis = list(title = "Soil temperature (°C)"), margin = list(l = 100))
 #
 # Temperature per species
-plot_ly(Heath_temp, x = ~Soil_temperature_Au, y = ~Date_time, name = "Aulacomnium turgidum", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+plot_ly(Heath, x = ~Soil_temperature_Au, y = ~Date_time, name = "Aulacomnium turgidum", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Soil_temperature_Di, y = ~Date_time, name = "Dicranum scoparium",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(x = ~Soil_temperature_Hy, y = ~Date_time, name = "Hylocomium splendens",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
   add_trace(x = ~Soil_temperature_Pl, y = ~Date_time, name = "Pleurozium schreberi",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
