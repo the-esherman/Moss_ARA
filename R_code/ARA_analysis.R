@@ -120,7 +120,7 @@ EM50_Heath.2 <- EM50_Heath.1 %>%
   select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
   filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
 
-
+# write_csv(EM50_Heath.2, "Data_clean/Heath_EM50_simple.csv")
 
 
 
@@ -298,7 +298,7 @@ field_ARA_wide.export <- field_ARA_wide.5 %>%
   rename("AirT" = AirT_C)
 
 
-write_csv(field_ARA_wide.export, "export/Q1_ARA2.csv", na = "NA")
+#write_csv(field_ARA_wide.export, "export/Q1_ARA2.csv", na = "NA")
 
 
 ggplot(data = field_ARA_wide.5, aes(x = Et_prod_umol_h_m2)) + geom_histogram()
@@ -366,7 +366,7 @@ Q1_ARA <- field_ARA_wide.5 %>%
 #
 # Transform data
 Q1_ARA <- Q1_ARA %>%
-  select(1:3, Et_prod_umol_h_m2) %>%
+  select(1:3, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
   mutate(logEt_prod = log(Et_prod_umol_h_m2+2),
          sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
@@ -374,7 +374,7 @@ Q1_ARA <- Q1_ARA %>%
          ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
          arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))))
 #
-lme1 <- lme(cubeEt_prod ~ Round*Species,
+lme1 <- lme(logEt_prod ~ Round*Species,
             random = ~1|Block/Species,
             data = Q1_ARA, na.action = na.exclude, method = "REML")
 #
@@ -422,7 +422,7 @@ emmeans(modelAu,"Round")
 #
 #
 # Di
-modelDi <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
+modelDi <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)+AirT_C+Soil_temperature+Soil_moisture+PAR,data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
 Anova(modelDi, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 202.97 10  < 2.2e-16
