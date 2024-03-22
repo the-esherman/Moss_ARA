@@ -13,6 +13,7 @@ library(car)
 library(nlme)
 library(glmmTMB)
 library(emmeans)
+library(vegan)
 #library(lme4)
 #
 #
@@ -30,6 +31,7 @@ AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
 #
 # Soil parameters
 EM50_Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
+EM50_Wetland <- read_csv("Data_clean/Wetland_EM50.csv", col_names = TRUE)
 #
 # Chamber size
 Ch_H <- 7 # Chamber height (cm) above moss surface. This needs to be changed to match each plot estimated height
@@ -123,6 +125,21 @@ EM50_Heath.2 <- EM50_Heath.1 %>%
 # write_csv(EM50_Heath.2, "Data_clean/Heath_EM50_simple.csv")
 
 
+EM50_Wetland.1 <- EM50_Wetland %>%
+  rowwise() %>%
+  mutate(Soil_moisture = mean(c(Soil_moisture_B, Soil_moisture_P, Soil_moisture_R, Soil_moisture_W, Soil_moisture_Y, Soil_moisture_G), na.rm = TRUE),
+         Soil_temperature = mean(c(Soil_temperature_B, Soil_temperature_P, Soil_temperature_R, Soil_temperature_W, Soil_temperature_Y, Soil_temperature_G), na.rm = TRUE)) %>%
+  mutate(Soil_moisture = Soil_moisture*100) %>%
+  ungroup() %>%
+  select(Date_time, Soil_moisture, Soil_temperature, PAR) %>%
+  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time"), too_few = "debug", too_many = "debug") %>%
+  mutate(Date = ymd(Date),
+         Tid = hms::as_hms(Time)) 
+
+EM50_Wetland.2 <- EM50_Wetland.1 %>%
+  select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
+  filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
+
 
 
 
@@ -133,6 +150,16 @@ EM50_Heath.1 %>%
   ggplot() + geom_point(aes(x = Date_time, y = Soil_temperature))
 
 EM50_Heath.1 %>%
+  #filter(Date_time >= ymd(20210601) & Date_time <= ymd(20210630)) %>%
+  ggplot() + geom_point(aes(x = Date_time, y = PAR))
+
+EM50_Wetland.1 %>%
+  ggplot() + geom_point(aes(x = Date_time, y = Soil_moisture))
+
+EM50_Wetland.1 %>%
+  ggplot() + geom_point(aes(x = Date_time, y = Soil_temperature))
+
+EM50_Wetland.1 %>%
   ggplot() + geom_point(aes(x = Date_time, y = PAR))
 
 
@@ -350,7 +377,52 @@ vial_ARA.3 %>%
 #
 # 
 
+# Multivariate analysis on environmental data
+# NMDS
 
+morse.dist <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/morsecodes-dist.txt', row.names = 1, head = T)
+names (morse.dist) <- rownames (morse.dist)
+NMDS <- metaMDS (morse.dist)
+NMDS
+par (mfrow = c(1,2))
+ordiplot (NMDS, cex = 1.5, type = 't')
+stressplot (NMDS)
+
+morse.attr <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/morsecodes-attr.txt', row.names = 1, head = T)
+ef <- envfit (NMDS, morse.attr)
+ordiplot (NMDS, cex = 1.5, type = 't')
+plot (ef)
+
+
+
+
+
+vltava.spe <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/vltava-spe.txt', row.names = 1)
+NMDS <- metaMDS (vltava.spe)
+
+
+Field_environ <- field_ARA_wide.5 %>%
+  select(AirT_C, Soil_temperature, Soil_moisture, PAR)
+Field_sp <- as.data.frame(model.matrix( ~ Species - 1, data=field_ARA_wide.5 ))
+Field_environ.2 <- Field_environ %>%
+  cbind(Field_sp) %>%
+  rename("Au" = "SpeciesAu",
+         "Di" = "SpeciesDi",
+         "Hy" = "SpeciesHy",
+         "Pl" = "SpeciesPl",
+         "Po" = "SpeciesPo",
+         "Pti" = "SpeciesPti",
+         "Ra" = "SpeciesRa",
+         "Sf" = "SpeciesSf",
+         "Sli" = "SpeciesSli",
+         "S" = "SpeciesS")
+  
+
+NMDS_environ <- metaMDS(Field_environ, distance = "euclidean")
+par (mfrow = c(1,2))
+ordiplot(NMDS_environ, type = "t")
+stressplot(NMDS_environ)
+par (mfrow = c(1,1))
 
 
 #
@@ -413,6 +485,9 @@ Q1_ARA %>%
 
 
 
+model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
+Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
+
 # Au
 modelAu <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Au",], ziformula=~1, family=gaussian)
 Anova(modelAu, type = c("II"), test.statistic = c("Chi"), component = "cond")
@@ -422,8 +497,37 @@ emmeans(modelAu,"Round")
 #
 #
 # Di
-modelDi <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)+AirT_C+Soil_temperature+Soil_moisture+PAR,data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
+modelDi <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
 Anova(modelDi, type = c("II"), test.statistic = c("Chi"), component = "cond")
+#
+# PAR removed as very low probability
+modelDi2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_temperature*Soil_moisture,data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
+Anova(modelDi2, type = c("II"), test.statistic = c("Chi"), component = "cond")
+
+modelDi3 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_moisture,data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
+Anova(modelDi3, type = c("II"), test.statistic = c("Chi"), component = "cond")
+
+Q1_ARA %>%
+  filter(Species == "Di") %>%
+  ggplot() +
+  geom_point(aes(x = Soil_moisture, y = sqrt(Et_prod_umol_h_m2)))
+
+Q1_ARA %>%
+  filter(Species == "Di") %>%
+  ggplot() +
+  geom_point(aes(x = factor(Round, levels = order(levels(Round))), y = Soil_moisture))
+
+Q1_ARA %>%
+  #filter(Species == "Di") %>%
+  ggplot() +
+  geom_point(aes(x = Soil_temperature, y = Soil_moisture))
+
+Q1_ARA %>%
+  #filter(Species == "Di") %>%
+  ggplot() +
+  geom_point(aes(x = Soil_temperature, y = Soil_moisture))
+
+
 # χ     DF    p
 # 202.97 10  < 2.2e-16
 emmeans(modelDi,"Round")
@@ -432,6 +536,21 @@ emmeans(modelDi,"Round")
 # Hy
 modelHy <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
 Anova(modelHy, type = c("II"), test.statistic = c("Chi"), component = "cond")
+
+modelHy2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
+modelHy2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_temperature*Soil_moisture+PAR,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
+Anova(modelHy2, type = c("II"), test.statistic = c("Chi"), component = "cond")
+
+Q1_ARA %>%
+  filter(Species == "Hy") %>%
+  ggplot() +
+  geom_point(aes(x = Soil_temperature, y = sqrt(Et_prod_umol_h_m2)))
+
+Q1_ARA %>%
+  filter(Species == "Di") %>%
+  ggplot() +
+  geom_point(aes(x = PAR, y = Soil_moisture))
+
 # χ     DF    p
 # 249.08 10  < 2.2e-16
 emmeans(modelHy,"Round")
