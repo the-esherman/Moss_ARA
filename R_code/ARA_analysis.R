@@ -483,7 +483,7 @@ Field_environ.3 <- full_join(Field_environ_AirT, Field_environ_SoilT, by = join_
   select(!c(Block, Round))
 
 
-x <- Field_environ %>%
+Field_environ.x <- Field_environ %>%
   filter(Species == "Au") %>%
   select(-c(Block, Species, Round))
 
@@ -506,13 +506,28 @@ points(x = PCA_environ$x[Y_rw,1], y = PCA_environ$x[Y_rw,2], pch = 20, col = "ye
 biplot(PCA_environ, cex = 0.8, asp = 1)
 
 
-NMDS_environ <- metaMDS(Field_environ.1, distance = "bray")#, autotransform = TRUE)
+NMDS_environ <- metaMDS(Field_environ.x, distance = "bray")#, scaling = 1, autotransform = TRUE)
 par (mfrow = c(1,2))
 plot(NMDS_environ, type = "n")
 points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="white")
 text(NMDS_environ, display = "spec", cex=0.7, col="blue")
 stressplot(NMDS_environ)
 par (mfrow = c(1,1))
+
+# Modified from
+# https://www.davidzeleny.net/anadat-r/doku.php/en:pcoa_nmds
+# Code https://www.davidzeleny.net/anadat-r/doku.php/en:pcoa_nmds_rscript
+plot (NMDS_environ, main = 'NMDS', type = 'n')#, display = 'si')
+points (NMDS_environ, col = Field_environ$Round, pch = Field_environ$Round) # , display = 'si'
+legend ('bottomleft', pch = 1:11, col = 1:11, legend = 1:11, title = 'Round', cex = 0.8)
+text(NMDS_environ, display = "spec", cex=0.7, col="blue")
+
+text (NMDS_environ, col = "#FF000080", cex = 0.6, select = colSums (vltava.spe>0)>20) # , display = 'sp'
+
+vltava.spe <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/vltava-spe.txt', row.names = 1)
+vltava.env <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/vltava-env.txt')
+
+
 
 
 pairs(x = Field_environ.1, gap = 0, cex.labels = 0.5)
