@@ -407,6 +407,23 @@ Field_environ <- field_ARA_wide.5 %>%
          Soil_temperature = Soil_temperature + 273) %>% # remove negative temperature by converting to kelvin
   select(-AirT_C)
 
+Field_environ.1 <- Field_environ %>%
+  select(!c(Block, Species, Round))
+
+Field_sp <- as.data.frame(model.matrix( ~ Species - 1, data=field_ARA_wide.5 ))
+Field_environ.2 <- Field_environ %>%
+  cbind(Field_sp) %>%
+  rename("Au" = "SpeciesAu",
+         "Di" = "SpeciesDi",
+         "Hy" = "SpeciesHy",
+         "Pl" = "SpeciesPl",
+         "Po" = "SpeciesPo",
+         "Pti" = "SpeciesPti",
+         "Ra" = "SpeciesRa",
+         "Sf" = "SpeciesSf",
+         "Sli" = "SpeciesSli",
+         "S" = "SpeciesS")
+
 Field_environ_AirT <- Field_environ %>%
   select(Block, Species, Round, AirT) %>%
   pivot_wider(names_from = Species, values_from = AirT) %>%
@@ -466,28 +483,39 @@ Field_environ.3 <- full_join(Field_environ_AirT, Field_environ_SoilT, by = join_
   select(!c(Block, Round))
 
 
+x <- Field_environ %>%
+  filter(Species == "Au") %>%
+  select(-c(Block, Species, Round))
 
-Field_sp <- as.data.frame(model.matrix( ~ Species - 1, data=field_ARA_wide.5 ))
-Field_environ.2 <- Field_environ %>%
-  cbind(Field_sp) %>%
-  rename("Au" = "SpeciesAu",
-         "Di" = "SpeciesDi",
-         "Hy" = "SpeciesHy",
-         "Pl" = "SpeciesPl",
-         "Po" = "SpeciesPo",
-         "Pti" = "SpeciesPti",
-         "Ra" = "SpeciesRa",
-         "Sf" = "SpeciesSf",
-         "Sli" = "SpeciesSli",
-         "S" = "SpeciesS")
-  
+# Modified from https://stirlingcodingclub.github.io/ordination/
+x <- Field_environ.1
+x <- scale(x)
+PCA_environ <- prcomp(x)
+B_rw <- which(Field_environ[,1] == "B")
+P_rw <- which(Field_environ[,1] == "P")
+R_rw <- which(Field_environ[,1] == "R")
+W_rw <- which(Field_environ[,1] == "W")
+Y_rw <- which(Field_environ[,1] == "Y")
+plot(x = PCA_environ$x[,1], y = PCA_environ$x[,2], asp = 1, cex.lab = 1.25, 
+     cex.axis = 1.25, xlab = "PC1", ylab = "PC2")
+points(x = PCA_environ$x[B_rw,1], y = PCA_environ$x[B_rw,2], pch = 20, col = "blue")
+points(x = PCA_environ$x[P_rw,1], y = PCA_environ$x[P_rw,2], pch = 20, col = "purple")
+points(x = PCA_environ$x[R_rw,1], y = PCA_environ$x[R_rw,2], pch = 20, col = "red")
+points(x = PCA_environ$x[W_rw,1], y = PCA_environ$x[W_rw,2], pch = 20, col = "white")
+points(x = PCA_environ$x[Y_rw,1], y = PCA_environ$x[Y_rw,2], pch = 20, col = "yellow")
+biplot(PCA_environ, cex = 0.8, asp = 1)
 
-NMDS_environ <- metaMDS(Field_environ.3, distance = "bray")#, autotransform = TRUE)
+
+NMDS_environ <- metaMDS(Field_environ.1, distance = "bray")#, autotransform = TRUE)
 par (mfrow = c(1,2))
-ordiplot(NMDS_environ, type = "t")
+plot(NMDS_environ, type = "n")
+points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="white")
+text(NMDS_environ, display = "spec", cex=0.7, col="blue")
 stressplot(NMDS_environ)
 par (mfrow = c(1,1))
 
+
+pairs(x = Field_environ.1, gap = 0, cex.labels = 0.5)
 Field_environ_cor <- cor(Field_environ.2, method = "kendall")
 corrplot::corrplot(Field_environ_cor, type = "upper", order = "hclust", tl.col = "black", tl.srt =  45)
 
