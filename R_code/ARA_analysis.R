@@ -492,13 +492,15 @@ Field_species <- field_ARA_wide.5 %>%
   select(Block, Species, Round, Et_prod_umol_h_m2)
 
 
-x <- cor(Field_environ.y[4:8], method = "kendall")
+x <- cor(Field_environ.y[8:4], method = "kendall")
 corrplot::corrplot(x, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
 
-# PCOA instead?
+# PCoA instead?
 
 Field_environ.y <- Field_environ %>%
   left_join(Field_species, by = join_by(Block, Species, Round))
+
+#write_csv(Field_environ.y, "export/N2fix_environ.csv")
 
 # Only Aulocomium
 Field_environ.Au <- Field_environ.y %>%
@@ -507,7 +509,6 @@ Field_environ.Au <- Field_environ.y %>%
 
 Field_environ_dis.Au <- vegdist(Field_environ.Au[4:7]) # Bray-Curtis
 PCOA_environ.Au <- cmdscale(Field_environ_dis.Au, add=T, eig=T)
-
 
 plot(PCOA_environ.Au$points, xlab="PCoA 1", ylab="PCoA 2")
 
@@ -546,7 +547,7 @@ Field_environ.Au %>%
   geom_segment(data = env_Au,
                aes(x = 0, xend = Dim1, y = 0, yend = Dim2),
                arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
-  ggrepel::geom_text_repel(data = env_Au, aes(x = Dim1, y = Dim2, label  = "Ethylene", size = 7, color = "#4D495A")) + 
+  ggrepel::geom_text_repel(data = env_Au, aes(x = Dim1, y = Dim2, label  = "Ethylene"), size = 7, color = "#4D495A") + 
   xlab(label.x_Au) + 
   ylab(label.y_Au)
 
@@ -582,8 +583,6 @@ Field_environ.Au.2$PC1 <- PCA_environ.Au$x[,1]
 Field_environ.Au.2$PC2 <- PCA_environ.Au$x[,2]
 
 
-PCA_environ.Au$rotation
-
 # PC scores for label
 label.x_Au.2 <- paste("PC1 (", plyr::round_any((PCA_environ.Au$sdev/sum(PCA_environ.Au$sdev))[1]*100, accuracy = 0.01), "%)", sep = "") # PC1 % variance explained
 label.y_Au.2 <- paste("PC2 (", plyr::round_any((PCA_environ.Au$sdev/sum(PCA_environ.Au$sdev))[2]*100, accuracy = 0.01), "%)", sep = "") # PC2 % variance explained
@@ -604,10 +603,13 @@ Field_environ.Au.2 %>%
   theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21))
   
 
-
+NMDS_environ <- metaMDS(Field_environ.Au[4:7], distance = "bray")#, scaling = 1, autotransform = TRUE)
 
 
 NMDS_environ <- metaMDS(Field_environ.y[4:7], distance = "bray")#, scaling = 1, autotransform = TRUE)
+
+
+
 
 
 # From Leah
@@ -694,9 +696,15 @@ text(NMDS_environ, display = "spec", cex=0.7, col="blue")
 stressplot(NMDS_environ)
 par (mfrow = c(1,1))
 
+plot(envfit_Au.3, cex=1.2, axis=TRUE, bg = rgb(1, 1, 1, 0.5))
+
 
 NMDS_environ$points[,2]
 
+
+envfit_Au.3 <- envfit(NMDS_environ,
+                      Field_environ.Au[8],
+                      permutations = 9999, na.rm = TRUE)
 
 
 
@@ -934,6 +942,14 @@ x <- summarySE(Q1_ARA, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species"
 #=======  ♫♫  Graphs        ♫♫ =======
 #-------  ♪   Environmental ♪ -------
 
+
+EM50_Heath %>%
+  ggplot() +
+  geom_point(aes(x = Date_time, y = Soil_moisture_B), colour = "#0072B2") +
+  #geom_point(aes(x = Date_time, y = Soil_moisture_P), colour = "#CC79A7") +
+  geom_point(aes(x = Date_time, y = Soil_moisture_R), colour = "#D55E00") +
+  #geom_point(aes(x = Date_time, y = Soil_moisture_W), colour = "#009E73") +
+  geom_point(aes(x = Date_time, y = Soil_moisture_Y), colour = "#F0E442")
 
 #
 #
