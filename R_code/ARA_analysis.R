@@ -483,9 +483,187 @@ Field_environ.3 <- full_join(Field_environ_AirT, Field_environ_SoilT, by = join_
   select(!c(Block, Round))
 
 
-Field_environ.x <- Field_environ %>%
+Field_environ.x <- Field_environ# %>%
   filter(Species == "Au") %>%
   select(-c(Block, Species, Round))
+
+
+Field_species <- field_ARA_wide.5 %>%
+  select(Block, Species, Round, Et_prod_umol_h_m2)
+
+
+x <- cor(Field_environ.y[4:8], method = "kendall")
+corrplot::corrplot(x, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+
+# PCOA instead?
+
+Field_environ.y <- Field_environ %>%
+  left_join(Field_species, by = join_by(Block, Species, Round))
+
+# Only Aulocomium
+Field_environ.Au <- Field_environ.y %>%
+  mutate(Round = as.factor(Round)) %>%
+  filter(Species == "Au")
+
+Field_environ_dis.Au <- vegdist(Field_environ.Au[4:7]) # Bray-Curtis
+PCOA_environ.Au <- cmdscale(Field_environ_dis.Au, add=T, eig=T)
+
+
+plot(PCOA_environ.Au$points, xlab="PCoA 1", ylab="PCoA 2")
+
+Field_environ.Au$PC1 <- PCOA_environ.Au$points[,1] # axis 1
+Field_environ.Au$PC2 <- PCOA_environ.Au$points[,2] # axis 2
+
+envfit_Au <- envfit(PCOA_environ.Au,
+       Field_environ.Au[8],
+       permutations = 99999, na.rm = TRUE)
+env_Au <- data.frame(scores(envfit_Au, display = "vectors"))
+env_Au <- cbind(env_Au,
+               Var = rownames(env_Au),
+               Pvalues = envfit_Au$vectors$pvals,
+               R_squared = envfit_Au$vectors$r)
+env_Au$comm <- "Au"
+
+
+label.x_Au <- paste("PC1 (", plyr::round_any((PCOA_environ.Au$eig/sum(PCOA_environ.Au$eig))[1]*100, accuracy = 0.01), "%)", sep = "") # PC1 % variance explained
+label.y_Au <- paste("PC2 (", plyr::round_any((PCOA_environ.Au$eig/sum(PCOA_environ.Au$eig))[2]*100, accuracy = 0.01), "%)", sep = "") # PC2 % variance explained
+
+# Field_environ.yy <- Field_environ.Au.x %>%
+#   mutate(Round = as.factor(Round)) %>%
+#   filter(Species == "Au")
+
+
+
+#plot_environ <- 
+Field_environ.Au %>%
+  ggplot() +
+  geom_point(aes(x = PC1, y = PC2, col = Round, pch = Block), size = 6) + 
+  theme_classic() + 
+  theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21)) + 
+  #scale_color_manual("Species", values = colors_trt, labels = label_trt) + 
+  stat_ellipse(aes(x = PC1, y = PC2, col = Round), level = 0.75, lty = 2) +
+#annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
+  geom_segment(data = env_Au,
+               aes(x = 0, xend = Dim1, y = 0, yend = Dim2),
+               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
+  ggrepel::geom_text_repel(data = env_Au, aes(x = Dim1, y = Dim2, label  = "Ethylene", size = 7, color = "#4D495A")) + 
+  xlab(label.x_Au) + 
+  ylab(label.y_Au)
+
+
+# PCA instead?
+# Scale environmental factors for Au
+Field_environ.Au.scaled <- scale(Field_environ.Au[4:7])
+#PCA_environ.Au <- prcomp(Field_environ.Au.scaled) # Alternative scaling by: scale. = TRUE
+PCA_environ.Au <- prcomp(Field_environ.Au[4:7], center = TRUE, scale. = TRUE)
+PCA_environ.Au.2 <- princomp(Field_environ.Au.scaled) # Alternative not scaling, but using correlation matrix: cor = TRUE
+PCA_environ.Au.3 <- rda(Field_environ.Au.scaled) # Is it really the same as a PCA, if nothing is changed within the function?
+
+# Plot the different PCA versions
+ordiplot(PCA_environ.Au)
+ordiplot(PCA_environ.Au.2) # exactly the same as previous, but rotated differently
+ordiplot(PCA_environ.Au.3) # Something else
+
+summary(PCA_environ.Au.2, loadings = TRUE, cutoff = 0)
+
+# Fit the ethylene production
+envfit_Au.2 <- envfit(PCA_environ.Au,
+                    Field_environ.Au[8],
+                    permutations = 99999, na.rm = TRUE)
+env_Au.2 <- data.frame(scores(envfit_Au.2, display = "vectors"))
+env_Au.2 <- cbind(env_Au.2,
+                Var = rownames(env_Au.2),
+                Pvalues = envfit_Au.2$vectors$pvals,
+                R_squared = envfit_Au.2$vectors$r)
+
+# Extract PC scores
+Field_environ.Au.2 <- Field_environ.Au
+Field_environ.Au.2$PC1 <- PCA_environ.Au$x[,1]
+Field_environ.Au.2$PC2 <- PCA_environ.Au$x[,2]
+
+
+PCA_environ.Au$rotation
+
+# PC scores for label
+label.x_Au.2 <- paste("PC1 (", plyr::round_any((PCA_environ.Au$sdev/sum(PCA_environ.Au$sdev))[1]*100, accuracy = 0.01), "%)", sep = "") # PC1 % variance explained
+label.y_Au.2 <- paste("PC2 (", plyr::round_any((PCA_environ.Au$sdev/sum(PCA_environ.Au$sdev))[2]*100, accuracy = 0.01), "%)", sep = "") # PC2 % variance explained
+
+
+Field_environ.Au.2 %>%
+  ggplot() +
+  geom_point(aes(x = PC1, y = PC2, col = Round, pch = Block)) +
+  stat_ellipse(aes(x = PC1, y = PC2, col = Round), level = 0.75, lty = 2) +
+  #annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
+  geom_segment(data = env_Au.2,
+               aes(x = 0, xend = PC1, y = 0, yend = PC2),
+               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
+  ggrepel::geom_text_repel(data = env_Au.2, aes(x = PC1, y = PC2, label  = "Ethylene"), size = 7, color = "#4D495A") +
+  xlab(label.x_Au.2) +
+  ylab(label.y_Au.2) +
+  theme_classic() +
+  theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21))
+  
+
+
+
+
+NMDS_environ <- metaMDS(Field_environ.y[4:7], distance = "bray")#, scaling = 1, autotransform = TRUE)
+
+
+# From Leah
+## combine community and environmental data and calculate distances
+otus_21_ITS <-   #this is the community data
+map_21_ITS <-  # this is the environmental  data
+all.equal(rownames(map_21_ITS),rownames(otus_21_ITS)) #check that row order is the same
+dm_21_ITS<-vegdist(otus_21_ITS) #calculate distances with bray-curtis
+
+#PCoA and envfit
+pcoa_21_ITS<-cmdscale(dm_21_ITS,add=T,eig=T) #do PCoA
+map_21_ITS$PC1_ITS<-pcoa_21_ITS$points[,1] #extract axis 1
+map_21_ITS$PC2_ITS<-pcoa_21_ITS$points[,2] #extract axis 2
+relevant_varaibles <- c("insert your variables for envfit here")
+#run envfit
+envfit_ITS_21 <- envfit(pcoa_21_ITS, 
+                        select(map_21_ITS, all_of(relevant_variables_21)), 
+                        permutations = 99999,na.rm = TRUE) 
+#convert enfvit results to dataframe
+env_21_ITS_a <- data.frame(scores(envfit_ITS_21, display = "vectors"))
+env_21_ITS_a <- cbind(env_21_ITS_a, 
+                      Var = rownames(env_21_ITS_a), 
+                      Pvalues = envfit_ITS_21$vectors$pvals, 
+                      R_squared = envfit_ITS_21$vectors$r)
+env_21_ITS_a$comm <- "ITS_21_trt"
+
+
+label.x_21_ITS<-paste("PC1 (",plyr::round_any((data$pcoa_21_ITS$eig/sum(data$pcoa_21_ITS$eig))[1]*100,accuracy=0.01),"%)",sep="") # PC1 % variance explained
+label.y_21_ITS<-paste("PC2 (",plyr::round_any((data$pcoa_21_ITS$eig/sum(data$pcoa_21_ITS$eig))[2]*100,accuracy=0.01),"%)",sep="") # PC2 % variance explained
+
+plot_21_ITS <- ggplot(data = subset(data$map_19, Treatment != "Gradient"))+
+  geom_point(aes(x=PC1_ITS, y=PC2_ITS, col= Treatment, pch =Block), size = 6)+ 
+  theme_classic() + 
+  theme(legend.text = element_text(size=21), legend.title = element_text(size = 21))+ 
+  scale_color_manual("Removal Treatment", values = colors_trt, labels = label_trt) + 
+  stat_ellipse(aes(x=PC1_ITS, y=PC2_ITS, col = Treatment), level = 0.75, lty = 2) + 
+  #annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
+  geom_segment(data = envfit_split$ITS_21_trt,
+               aes(x = 0, xend = Dim1, y = 0, yend = Dim2),
+               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
+  geom_text_repel(data = envfit_split$ITS_21_trt, aes(x = Dim1, y = Dim2, 
+                                                      label  = Var, size = 7, color = "#4D495A")+ 
+                    xlab (label.x_21_ITS) + ylab(label.y_21_ITS))
+
+
+
+
+
+
+
+
+
+corrplot::corrplot(Field_environ.y[4:8], type = "upper", order = "hclust", tl.col = "black", tl.srt =  45)
+
+
+
 
 # Modified from https://stirlingcodingclub.github.io/ordination/
 x <- Field_environ.1
@@ -506,6 +684,8 @@ points(x = PCA_environ$x[Y_rw,1], y = PCA_environ$x[Y_rw,2], pch = 20, col = "ye
 biplot(PCA_environ, cex = 0.8, asp = 1)
 
 
+rankindex(Field_environ.x)
+
 NMDS_environ <- metaMDS(Field_environ.x, distance = "bray")#, scaling = 1, autotransform = TRUE)
 par (mfrow = c(1,2))
 plot(NMDS_environ, type = "n")
@@ -513,6 +693,13 @@ points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="whit
 text(NMDS_environ, display = "spec", cex=0.7, col="blue")
 stressplot(NMDS_environ)
 par (mfrow = c(1,1))
+
+
+NMDS_environ$points[,2]
+
+
+
+
 
 # Modified from
 # https://www.davidzeleny.net/anadat-r/doku.php/en:pcoa_nmds
