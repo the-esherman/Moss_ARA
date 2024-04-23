@@ -168,28 +168,57 @@ EM50_Wetland.1 %>%
 #------- • Field data -------
 #
 # Remove chamber test and combine with temperature
-field_ARA.2 <- field_ARA %>%
+field_ARA.1 <- field_ARA %>%
   filter(Species != "B") %>%
   # Round timestamp to nearest hour!
   mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
   mutate(Tid = round_date(ymd_hms(Date_time), unit = "hour")) %>%
   mutate(Tid = hms::as_hms(Tid)) %>%
-  # Combine with air temperature
-  left_join(AirT_wetland.1, by = join_by(Date, Tid)) %>%
-  left_join(EM50_Heath.2, by = join_by(Date, Tid)) %>%
+  # Set the times
+  group_by(Round, Date) %>%
+  mutate(Start = floor_date(min(Date_time), unit = "hour"),
+         End = ceiling_date(max(Date_time), unit = "hour")) %>%
+  ungroup() %>%
+  mutate(across(c(Start, End), hms::as_hms)) %>%
+  relocate(c(Start, End), .after = Timestamp) %>%
   # Remove temporary variables
   select(!c("Date_time", "Tid"))
+#
+# Select the period, to match interval for environmental data
+field_ARA.period <- field_ARA.1 %>%
+  select(Round, Date, Start, End) %>%
+  distinct(Round, Date, Start, End, .keep_all = TRUE)
+#
+# Environmental data averaged over the time of measurement for each day when measurements were done
+field_environ <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
+  left_join(field_ARA.period, by = join_by(Date)) %>%
+  filter(!is.na(Round)) %>%
+  group_by(Date) %>%
+  filter(Tid >= Start & Tid <= End) %>%
+  summarise(Soil_moisture = mean(Soil_moisture),
+            Soil_temperature = mean(Soil_temperature),
+            PAR = mean(PAR),
+            AirT_C = mean(AirT_C)) %>%
+  ungroup()
+#
+# Reduce to an environmental value for each Species per block per round
+# Combine with the big dataset first to connect date with block, species and round
+field_environ.2 <- field_ARA.1 %>%
+  left_join(field_environ, by = join_by(Date)) %>%
+  select(Block, Species, Round, Soil_moisture, Soil_temperature, PAR, AirT_C) %>%
+  distinct(Block, Species, Round, Soil_moisture, Soil_temperature, PAR, AirT_C, .keep_all = T)
+#
 #
 # Pivot wider and combine:
 # Timestamp
 field_ARA.Time <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_moisture, Soil_temperature, PAR)) %>%
+  select(c(Block, Species, Time, Round, Timestamp)) %>%
   complete(Block, Species, Time, Round) %>%
   pivot_wider(names_from = Time, values_from = Timestamp)
 #
 # Ethylene
 field_ARA.Ethyl <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Acet_conc_prC, AirT_C, Soil_moisture, Soil_temperature, PAR)) %>%
+  select(c(Block, Species, Time, Round, Ethyl_conc_ppm)) %>%
   complete(Block, Species, Time, Round) %>%
   pivot_wider(names_from = Time, values_from = Ethyl_conc_ppm) %>%
   rename("Ethyl_conc_ppm_T0" = T0,
@@ -202,7 +231,7 @@ field_ARA.Ethyl <- field_ARA.2 %>%
 #
 # Acetylene
 field_ARA.Acet <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, AirT_C, Soil_moisture, Soil_temperature, PAR)) %>%
+  select(c(Block, Species, Time, Round, Acet_conc_prC)) %>%
   complete(Block, Species, Time, Round) %>%
   mutate(Acet_conc_ppm = Acet_conc_prC*10000) %>%
   #mutate(Acet_conc_ppm = if_else(Acet_conc_ppm <= 0, 0, Acet_conc_ppm)) %>%
@@ -216,62 +245,15 @@ field_ARA.Acet <- field_ARA.2 %>%
          "Acet_conc_ppm_T3" = T3,
          "Acet_conc_ppm_T4" = T4)
 #
-# Use the mean of T0 and T1 for air and soil temperature and soil moisture
-#
-# Air temperature
-field_ARA.AirT <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, Soil_moisture, Soil_temperature, PAR)) %>%
-  complete(Block, Species, Time, Round) %>%
-  pivot_wider(names_from = Time, values_from = AirT_C) %>%
-  rowwise() %>%
-  mutate(AirT_C = mean(c(T0, T1), na.rm = TRUE)) %>%
-  ungroup() %>%
-  select(!c(T0, T0x, T1, T1x, T2, T3, T4)) #%>%
-  #rename("AirT_C" = T0)
-#
-# Soil temperature
-field_ARA.SoilT <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_moisture, PAR)) %>%
-  complete(Block, Species, Time, Round) %>%
-  pivot_wider(names_from = Time, values_from = Soil_temperature) %>%
-  rowwise() %>%
-  mutate(Soil_temperature = mean(c(T0,T1), na.rm = TRUE)) %>%
-  ungroup() %>%
-  select(!c(T0, T0x, T1, T1x, T2, T3, T4)) #%>%
-  #rename("Soil_temperature" = T0)
-#
-# Soil moisture
-field_ARA.SoilM <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_temperature, PAR)) %>%
-  complete(Block, Species, Time, Round) %>%
-  pivot_wider(names_from = Time, values_from = Soil_moisture) %>%
-  rowwise() %>%
-  mutate(Soil_moisture = mean(c(T0,T1), na.rm = TRUE)) %>%
-  ungroup() %>%
-  select(!c(T0, T0x, T1, T1x, T2, T3, T4)) #%>%
-  #rename("Soil_moisture" = T0)
-#
-# PAR
-field_ARA.PAR <- field_ARA.2 %>% 
-  select(!c(Time_nr, Date, Timestamp, Chamber_no, Chain_type, Temp_approx_C, Ethyl_conc_ppm, Acet_conc_prC, AirT_C, Soil_temperature, Soil_moisture)) %>%
-  complete(Block, Species, Time, Round) %>%
-  pivot_wider(names_from = Time, values_from = PAR) %>%
-  rowwise() %>%
-  mutate(PAR = mean(c(T0,T1), na.rm = TRUE)) %>%
-  ungroup() %>%
-  select(!c(T0, T0x, T1, T1x, T2, T3, T4))
-#
-# Join 
-field_ARA_wide <-  left_join(field_ARA.Time, field_ARA.AirT, by = join_by(Block, Species, Round)) %>%
-  left_join(field_ARA.SoilT, by = join_by(Block, Species, Round)) %>%
-  left_join(field_ARA.SoilM, by = join_by(Block, Species, Round)) %>%
-  left_join(field_ARA.PAR, by = join_by(Block, Species, Round)) %>%
+# Join wide files and environmental data
+field_ARA_wide <-  left_join(field_ARA.Time, field_environ.2, by = join_by(Block, Species, Round)) %>%
   left_join(field_ARA.Ethyl, by = join_by(Block, Species, Round)) %>%
   left_join(field_ARA.Acet, by = join_by(Block, Species, Round))
 #
+#
 # Do the math
 #
-#
+# Time and acetylene loss
 field_ARA_wide.2 <- field_ARA_wide %>%
   # Calculate the time difference from T_n-1 to T_n
   mutate(Time1 = hour(seconds_to_period(T1 - T0))*60 + minute(seconds_to_period(T1 - T0)),
