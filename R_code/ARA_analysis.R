@@ -358,124 +358,25 @@ vial_ARA.3 %>%
 #------- • Temperature, moisture and PAR -------
 #
 # 
-
-# Multivariate analysis on environmental data
-# NMDS
-
-morse.dist <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/morsecodes-dist.txt', row.names = 1, head = T)
-names (morse.dist) <- rownames (morse.dist)
-NMDS <- metaMDS (morse.dist)
-NMDS
-par (mfrow = c(1,2))
-ordiplot (NMDS, cex = 1.5, type = 't')
-stressplot (NMDS)
-
-morse.attr <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/morsecodes-attr.txt', row.names = 1, head = T)
-ef <- envfit (NMDS, morse.attr)
-ordiplot (NMDS, cex = 1.5, type = 't')
-plot (ef)
-
-
-
-
-
-vltava.spe <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/vltava-spe.txt', row.names = 1)
-NMDS <- metaMDS (vltava.spe)
-
-
-Field_environ <- field_ARA_wide.5 %>%
+# Extract environmental data
+# Done again (Notice capital F), as to maintain the order of variables with the order from ethylene calculations
+field_environ.3 <- field_ARA_wide.5 %>%
   select(Block, Species, Round, AirT_C, Soil_temperature, Soil_moisture, PAR) %>%
   mutate(AirT = AirT_C + 273,
          Soil_temperature = Soil_temperature + 273) %>% # remove negative temperature by converting to kelvin
   select(-AirT_C)
-
-Field_environ.1 <- Field_environ %>%
+#
+# Remove Block, Species, and Round to do multivariate analysis
+field_environ.4 <- field_environ.3 %>%
   select(!c(Block, Species, Round))
-
-Field_sp <- as.data.frame(model.matrix( ~ Species - 1, data=field_ARA_wide.5 ))
-Field_environ.2 <- Field_environ %>%
-  cbind(Field_sp) %>%
-  rename("Au" = "SpeciesAu",
-         "Di" = "SpeciesDi",
-         "Hy" = "SpeciesHy",
-         "Pl" = "SpeciesPl",
-         "Po" = "SpeciesPo",
-         "Pti" = "SpeciesPti",
-         "Ra" = "SpeciesRa",
-         "Sf" = "SpeciesSf",
-         "Sli" = "SpeciesSli",
-         "S" = "SpeciesS")
-
-Field_environ_AirT <- Field_environ %>%
-  select(Block, Species, Round, AirT) %>%
-  pivot_wider(names_from = Species, values_from = AirT) %>%
-  rename("AirT_Au" = "Au",
-         "AirT_Di" = "Di",
-         "AirT_Hy" = "Hy",
-         "AirT_Pl" = "Pl",
-         "AirT_Po" = "Po",
-         "AirT_Pti" = "Pti",
-         "AirT_Ra" = "Ra",
-         "AirT_Sf" = "Sf",
-         "AirT_Sli" = "Sli",
-         "AirT_S" = "S")
-Field_environ_SoilT <- Field_environ %>%
-  select(Block, Species, Round, Soil_temperature) %>%
-  pivot_wider(names_from = Species, values_from = Soil_temperature) %>%
-  rename("SoilT_Au" = "Au",
-         "SoilT_Di" = "Di",
-         "SoilT_Hy" = "Hy",
-         "SoilT_Pl" = "Pl",
-         "SoilT_Po" = "Po",
-         "SoilT_Pti" = "Pti",
-         "SoilT_Ra" = "Ra",
-         "SoilT_Sf" = "Sf",
-         "SoilT_Sli" = "Sli",
-         "SoilT_S" = "S")
-Field_environ_SoilM <- Field_environ %>%
-  select(Block, Species, Round, Soil_moisture) %>%
-  pivot_wider(names_from = Species, values_from = Soil_moisture) %>%
-  rename("SoilM_Au" = "Au",
-         "SoilM_Di" = "Di",
-         "SoilM_Hy" = "Hy",
-         "SoilM_Pl" = "Pl",
-         "SoilM_Po" = "Po",
-         "SoilM_Pti" = "Pti",
-         "SoilM_Ra" = "Ra",
-         "SoilM_Sf" = "Sf",
-         "SoilM_Sli" = "Sli",
-         "SoilM_S" = "S")
-Field_environ_PAR <- Field_environ %>%
-  select(Block, Species, Round, PAR) %>%
-  pivot_wider(names_from = Species, values_from = PAR) %>%
-  rename("PAR_Au" = "Au",
-         "PAR_Di" = "Di",
-         "PAR_Hy" = "Hy",
-         "PAR_Pl" = "Pl",
-         "PAR_Po" = "Po",
-         "PAR_Pti" = "Pti",
-         "PAR_Ra" = "Ra",
-         "PAR_Sf" = "Sf",
-         "PAR_Sli" = "Sli",
-         "PAR_S" = "S")
-
-Field_environ.3 <- full_join(Field_environ_AirT, Field_environ_SoilT, by = join_by(Block, Round)) %>%
-  full_join(Field_environ_SoilM, by = join_by(Block, Round)) %>%
-  full_join(Field_environ_PAR, by = join_by(Block, Round)) %>%
-  select(!c(Block, Round))
+#
+# Correlation plot
+corrplot::corrplot(cor(field_environ.3[7:4], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+# All somewhat correlated
+#
+# NMDS
 
 
-Field_environ.x <- Field_environ# %>%
-  filter(Species == "Au") %>%
-  select(-c(Block, Species, Round))
-
-
-Field_species <- field_ARA_wide.5 %>%
-  select(Block, Species, Round, Et_prod_umol_h_m2)
-
-
-x <- cor(Field_environ.y[8:4], method = "kendall")
-corrplot::corrplot(x, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
 
 # PCoA instead?
 
