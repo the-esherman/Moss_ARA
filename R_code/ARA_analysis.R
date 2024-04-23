@@ -14,6 +14,7 @@ library(nlme)
 library(glmmTMB)
 library(emmeans)
 library(vegan)
+library(ggrepel)
 #library(lme4)
 #
 #
@@ -361,23 +362,131 @@ vial_ARA.3 %>%
 # Extract environmental data
 # Done again (Notice capital F), as to maintain the order of variables with the order from ethylene calculations
 field_environ.3 <- field_ARA_wide.5 %>%
-  select(Block, Species, Round, AirT_C, Soil_temperature, Soil_moisture, PAR) %>%
+  select(Block, Species, Round, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
   mutate(AirT = AirT_C + 273,
          Soil_temperature = Soil_temperature + 273) %>% # remove negative temperature by converting to kelvin
-  select(-AirT_C)
+  select(-AirT_C) %>%
+  mutate(Round = as.factor(Round)) %>%
+  pivot_wider(values_from = Et_prod_umol_h_m2, names_from = Species)
+
+# Export
+# write_csv(field_environ.3, "export/N2fix_environ2.csv")
 #
-# Remove Block, Species, and Round to do multivariate analysis
-field_environ.4 <- field_environ.3 %>%
-  distinct(Block, Round, Soil_temperature, Soil_moisture, PAR, AirT)
 #
-# Correlation plot
-corrplot::corrplot(cor(field_environ.4[6:3], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+# Correlation plot of environmental data
+corrplot::corrplot(cor(field_environ.3[6:3], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
 # All somewhat correlated
 #
 # NMDS
-NMDS_environ <- metaMDS(field_environ.4[3:6], distance = "bray")#, scaling = 1, autotransform = TRUE) # Does a sqrt transformation and Wisconsin standardization
+NMDS_environ <- metaMDS(field_environ.3[3:6], distance = "bray")#, scaling = 1, autotransform = TRUE) # Does a sqrt transformation and Wisconsin standardization
+#
+# Plot
+# Standard with little fancyness
+par (mfrow = c(1,2))
+plot(NMDS_environ, type = "n")
+points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="white")
+text(NMDS_environ, display = "spec", cex=0.7, col="blue")
+stressplot(NMDS_environ)
+par (mfrow = c(1,1))
+#
+# Species ethylene production fit
+envfit.et <- envfit(NMDS_environ,
+                 field_environ.3[7:16],
+                 permutations = 9999, na.rm = TRUE)
+#
+# Extract points to create graph
+# Main plot with NMDS scores
+field_environ.plot <- field_environ.3
+field_environ.plot$NMDS1 <- NMDS_environ$points[,1]
+field_environ.plot$NMDS2 <- NMDS_environ$points[,2]
+#
+# For text
+field_environ.scores.env <- as.data.frame(scores(NMDS_environ, "species"))
+field_environ.scores.env$Factors <- rownames(field_environ.scores.env)
+field_environ.scores.sp <- as.data.frame(scores(envfit.et$vectors$arrows))
+field_environ.scores.sp$Species <- rownames(field_environ.scores.sp)
+#
 #
 
+ggplot() +
+  geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
+  geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
+  #geom_text(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, label = Round)) +
+  geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
+  geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 3, color = "#4D495A") + 
+  #coord_equal() +
+  theme_classic()
+
+ggplot() +
+  geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
+  geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
+  #geom_text(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, label = Round)) +
+  geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
+  geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 3, color = "#4D495A") + 
+  #coord_equal() +
+  theme_classic()
+
+ordiplot(NMDS_environ)
+
+
+
+###################
+
+
+plot_21_ITS <- ggplot(data = subset(data$map_19, Treatment != "Gradient"))+
+  geom_point(aes(x=PC1_ITS, y=PC2_ITS, col= Treatment, pch =Block), size = 6)+ 
+  theme_classic() + 
+  theme(legend.text = element_text(size=21), legend.title = element_text(size = 21))+ 
+  scale_color_manual("Removal Treatment", values = colors_trt, labels = label_trt) + 
+  stat_ellipse(aes(x=PC1_ITS, y=PC2_ITS, col = Treatment), level = 0.75, lty = 2) + 
+  #annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
+  geom_segment(data = envfit_split$ITS_21_trt,
+               aes(x = 0, xend = Dim1, y = 0, yend = Dim2),
+               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
+  geom_text_repel(data = envfit_split$ITS_21_trt, aes(x = Dim1, y = Dim2, 
+                                                      label  = Var, size = 7, color = "#4D495A")+ 
+                    xlab (label.x_21_ITS) + ylab(label.y_21_ITS))
+
+
+
+
+
+ggplot() + 
+  geom_text(data=species.scores,aes(x=NMDS1,y=NMDS2,label=species),alpha=0.5) +  # add the species labels
+  geom_point(data=data.scores,aes(x=NMDS1,y=NMDS2),size=3) + # add the point markers
+  geom_text(data=data.scores,aes(x=NMDS1,y=NMDS2,label=site),size=6,vjust=0) +  # add the site labels
+  scale_colour_manual(values=c("A" = "red", "B" = "blue")) +
+  coord_equal() +
+  theme_bw()
+
+
+
+
+
+
+x <- scores(NMDS_environ, "site")
+x$sites[,1]
+
+data.scores <- as.data.frame(scores(NMDS_environ, "site"))  #Using the scores function from vegan to extract the site scores and convert to a data.frame
+data.scores$site <- rownames(data.scores)  # create a column of site names, from the rownames of data.scores
+head(data.scores)  #look at the data
+species.scores <- as.data.frame(scores(NMDS_environ, "species"))  #Using the scores function from vegan to extract the species scores and convert to a data.frame
+species.scores$species <- rownames(species.scores)  # create a column of species, from the rownames of species.scores
+head(species.scores)  #look at the data
+
+ggplot() + 
+  geom_text(data=species.scores,aes(x=NMDS1,y=NMDS2,label=species),alpha=0.5) +  # add the species labels
+  geom_point(data=data.scores,aes(x=NMDS1,y=NMDS2),size=3) + # add the point markers
+  geom_text(data=data.scores,aes(x=NMDS1,y=NMDS2,label=site),size=6,vjust=0) +  # add the site labels
+  scale_colour_manual(values=c("A" = "red", "B" = "blue")) +
+  coord_equal() +
+  theme_bw()
+
+
+
+
+
+plot(envfit.et, cex=1.2, axis=TRUE, bg = rgb(1, 1, 1, 0.5))
 
 
 
@@ -410,22 +519,13 @@ biplot(PCA_environ, cex = 0.8, asp = 1)
 rankindex(Field_environ.x)
 
 NMDS_environ <- metaMDS(Field_environ.x, distance = "bray")#, scaling = 1, autotransform = TRUE)
-par (mfrow = c(1,2))
-plot(NMDS_environ, type = "n")
-points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="white")
-text(NMDS_environ, display = "spec", cex=0.7, col="blue")
-stressplot(NMDS_environ)
-par (mfrow = c(1,1))
 
-plot(envfit_Au.3, cex=1.2, axis=TRUE, bg = rgb(1, 1, 1, 0.5))
 
 
 NMDS_environ$points[,2]
 
 
-envfit_Au.3 <- envfit(NMDS_environ,
-                      Field_environ.Au[8],
-                      permutations = 9999, na.rm = TRUE)
+
 
 
 
@@ -589,7 +689,7 @@ plot_21_ITS <- ggplot(data = subset(data$map_19, Treatment != "Gradient"))+
 # https://www.davidzeleny.net/anadat-r/doku.php/en:pcoa_nmds
 # Code https://www.davidzeleny.net/anadat-r/doku.php/en:pcoa_nmds_rscript
 plot (NMDS_environ, main = 'NMDS', type = 'n')#, display = 'si')
-points (NMDS_environ, col = Field_environ$Round, pch = Field_environ$Round) # , display = 'si'
+points (NMDS_environ, col = field_environ.3$Round, pch = field_environ.3$Round) # , display = 'si'
 legend ('bottomleft', pch = 1:11, col = 1:11, legend = 1:11, title = 'Round', cex = 0.8)
 text(NMDS_environ, display = "spec", cex=0.7, col="blue")
 
