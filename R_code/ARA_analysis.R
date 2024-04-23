@@ -168,7 +168,7 @@ EM50_Wetland.1 %>%
 #------- • Field data -------
 #
 # Remove chamber test and combine with temperature
-field_ARA.1 <- field_ARA %>%
+field_ARA.2 <- field_ARA %>%
   filter(Species != "B") %>%
   # Round timestamp to nearest hour!
   mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
@@ -185,7 +185,7 @@ field_ARA.1 <- field_ARA %>%
   select(!c("Date_time", "Tid"))
 #
 # Select the period, to match interval for environmental data
-field_ARA.period <- field_ARA.1 %>%
+field_ARA.period <- field_ARA.2 %>%
   select(Round, Date, Start, End) %>%
   distinct(Round, Date, Start, End, .keep_all = TRUE)
 #
@@ -203,7 +203,7 @@ field_environ <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)
 #
 # Reduce to an environmental value for each Species per block per round
 # Combine with the big dataset first to connect date with block, species and round
-field_environ.2 <- field_ARA.1 %>%
+field_environ.2 <- field_ARA.2 %>%
   left_join(field_environ, by = join_by(Date)) %>%
   select(Block, Species, Round, Soil_moisture, Soil_temperature, PAR, AirT_C) %>%
   distinct(Block, Species, Round, Soil_moisture, Soil_temperature, PAR, AirT_C, .keep_all = T)
@@ -368,13 +368,64 @@ field_environ.3 <- field_ARA_wide.5 %>%
 #
 # Remove Block, Species, and Round to do multivariate analysis
 field_environ.4 <- field_environ.3 %>%
-  select(!c(Block, Species, Round))
+  distinct(Block, Round, Soil_temperature, Soil_moisture, PAR, AirT)
 #
 # Correlation plot
-corrplot::corrplot(cor(field_environ.3[7:4], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+corrplot::corrplot(cor(field_environ.4[6:3], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
 # All somewhat correlated
 #
 # NMDS
+NMDS_environ <- metaMDS(field_environ.4[3:6], distance = "bray")#, scaling = 1, autotransform = TRUE) # Does a sqrt transformation and Wisconsin standardization
+#
+
+
+
+
+
+
+corrplot::corrplot(Field_environ.y[4:8], type = "upper", order = "hclust", tl.col = "black", tl.srt =  45)
+
+
+
+
+# Modified from https://stirlingcodingclub.github.io/ordination/
+x <- Field_environ.1
+x <- scale(x)
+PCA_environ <- prcomp(x)
+B_rw <- which(Field_environ[,1] == "B")
+P_rw <- which(Field_environ[,1] == "P")
+R_rw <- which(Field_environ[,1] == "R")
+W_rw <- which(Field_environ[,1] == "W")
+Y_rw <- which(Field_environ[,1] == "Y")
+plot(x = PCA_environ$x[,1], y = PCA_environ$x[,2], asp = 1, cex.lab = 1.25, 
+     cex.axis = 1.25, xlab = "PC1", ylab = "PC2")
+points(x = PCA_environ$x[B_rw,1], y = PCA_environ$x[B_rw,2], pch = 20, col = "blue")
+points(x = PCA_environ$x[P_rw,1], y = PCA_environ$x[P_rw,2], pch = 20, col = "purple")
+points(x = PCA_environ$x[R_rw,1], y = PCA_environ$x[R_rw,2], pch = 20, col = "red")
+points(x = PCA_environ$x[W_rw,1], y = PCA_environ$x[W_rw,2], pch = 20, col = "white")
+points(x = PCA_environ$x[Y_rw,1], y = PCA_environ$x[Y_rw,2], pch = 20, col = "yellow")
+biplot(PCA_environ, cex = 0.8, asp = 1)
+
+
+rankindex(Field_environ.x)
+
+NMDS_environ <- metaMDS(Field_environ.x, distance = "bray")#, scaling = 1, autotransform = TRUE)
+par (mfrow = c(1,2))
+plot(NMDS_environ, type = "n")
+points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="white")
+text(NMDS_environ, display = "spec", cex=0.7, col="blue")
+stressplot(NMDS_environ)
+par (mfrow = c(1,1))
+
+plot(envfit_Au.3, cex=1.2, axis=TRUE, bg = rgb(1, 1, 1, 0.5))
+
+
+NMDS_environ$points[,2]
+
+
+envfit_Au.3 <- envfit(NMDS_environ,
+                      Field_environ.Au[8],
+                      permutations = 9999, na.rm = TRUE)
 
 
 
@@ -486,12 +537,6 @@ Field_environ.Au.2 %>%
   theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21))
   
 
-NMDS_environ <- metaMDS(Field_environ.Au[4:7], distance = "bray")#, scaling = 1, autotransform = TRUE)
-
-
-NMDS_environ <- metaMDS(Field_environ.y[4:7], distance = "bray")#, scaling = 1, autotransform = TRUE)
-
-
 
 
 
@@ -536,58 +581,6 @@ plot_21_ITS <- ggplot(data = subset(data$map_19, Treatment != "Gradient"))+
   geom_text_repel(data = envfit_split$ITS_21_trt, aes(x = Dim1, y = Dim2, 
                                                       label  = Var, size = 7, color = "#4D495A")+ 
                     xlab (label.x_21_ITS) + ylab(label.y_21_ITS))
-
-
-
-
-
-
-
-
-
-corrplot::corrplot(Field_environ.y[4:8], type = "upper", order = "hclust", tl.col = "black", tl.srt =  45)
-
-
-
-
-# Modified from https://stirlingcodingclub.github.io/ordination/
-x <- Field_environ.1
-x <- scale(x)
-PCA_environ <- prcomp(x)
-B_rw <- which(Field_environ[,1] == "B")
-P_rw <- which(Field_environ[,1] == "P")
-R_rw <- which(Field_environ[,1] == "R")
-W_rw <- which(Field_environ[,1] == "W")
-Y_rw <- which(Field_environ[,1] == "Y")
-plot(x = PCA_environ$x[,1], y = PCA_environ$x[,2], asp = 1, cex.lab = 1.25, 
-     cex.axis = 1.25, xlab = "PC1", ylab = "PC2")
-points(x = PCA_environ$x[B_rw,1], y = PCA_environ$x[B_rw,2], pch = 20, col = "blue")
-points(x = PCA_environ$x[P_rw,1], y = PCA_environ$x[P_rw,2], pch = 20, col = "purple")
-points(x = PCA_environ$x[R_rw,1], y = PCA_environ$x[R_rw,2], pch = 20, col = "red")
-points(x = PCA_environ$x[W_rw,1], y = PCA_environ$x[W_rw,2], pch = 20, col = "white")
-points(x = PCA_environ$x[Y_rw,1], y = PCA_environ$x[Y_rw,2], pch = 20, col = "yellow")
-biplot(PCA_environ, cex = 0.8, asp = 1)
-
-
-rankindex(Field_environ.x)
-
-NMDS_environ <- metaMDS(Field_environ.x, distance = "bray")#, scaling = 1, autotransform = TRUE)
-par (mfrow = c(1,2))
-plot(NMDS_environ, type = "n")
-points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="white")
-text(NMDS_environ, display = "spec", cex=0.7, col="blue")
-stressplot(NMDS_environ)
-par (mfrow = c(1,1))
-
-plot(envfit_Au.3, cex=1.2, axis=TRUE, bg = rgb(1, 1, 1, 0.5))
-
-
-NMDS_environ$points[,2]
-
-
-envfit_Au.3 <- envfit(NMDS_environ,
-                      Field_environ.Au[8],
-                      permutations = 9999, na.rm = TRUE)
 
 
 
