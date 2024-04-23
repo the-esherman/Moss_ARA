@@ -184,11 +184,17 @@ filter(field_ARA, Block == "Y" & Species == "Pti" & Round == "5" & Time == "T0")
 
 
 
-
-
-
-
-
+# Check if there are duplicates or wrong dates
+# With Species
+# Should be 550
+field_ARA_unique.1 <- field_ARA %>%
+  filter(!grepl("Ch", Block)) %>% # Remove chamber control measurements
+  distinct(Block, Species, Round, Date)
+# Without species
+# Should be 55
+field_ARA_unique.2 <- field_ARA %>%
+  filter(!grepl("Ch", Block)) %>% # Remove chamber control measurements
+  distinct(Block, Round, Date)
 
 
 
