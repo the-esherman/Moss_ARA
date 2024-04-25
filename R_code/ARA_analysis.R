@@ -380,19 +380,20 @@ corrplot::corrplot(cor(field_environ.3[6:3], method = "kendall"), type = "upper"
 # NMDS
 NMDS_environ <- metaMDS(field_environ.3[3:6], distance = "bray")#, scaling = 1, autotransform = TRUE) # Does a sqrt transformation and Wisconsin standardization
 #
+# Species ethylene production fit
+envfit.et <- envfit(NMDS_environ,
+                    field_environ.3[7:16],
+                    permutations = 9999, na.rm = TRUE)
+#
 # Plot
 # Standard with little fancyness
 par (mfrow = c(1,2))
 plot(NMDS_environ, type = "n")
 points(NMDS_environ, display = "sites", cex = 0.8, pch=21, col="black", bg="white")
 text(NMDS_environ, display = "spec", cex=0.7, col="blue")
+plot(envfit.et)
 stressplot(NMDS_environ)
 par (mfrow = c(1,1))
-#
-# Species ethylene production fit
-envfit.et <- envfit(NMDS_environ,
-                 field_environ.3[7:16],
-                 permutations = 9999, na.rm = TRUE)
 #
 # Extract points to create graph
 # Main plot with NMDS scores
@@ -407,26 +408,24 @@ field_environ.scores.sp <- as.data.frame(scores(envfit.et$vectors$arrows))
 field_environ.scores.sp$Species <- rownames(field_environ.scores.sp)
 #
 #
-
 ggplot() +
   geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
   geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
+#  geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
+#  geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 5, color = "#4D495A") + 
+  coord_equal() +
+  theme_classic() +
+  theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21))
+#
+plot2 <- ggplot() +
+  geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
+  #geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
   #geom_text(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, label = Round)) +
   geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
   geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 3, color = "#4D495A") + 
   #coord_equal() +
   theme_classic()
 
-ggplot() +
-  geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
-  geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
-  #geom_text(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, label = Round)) +
-  geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
-  geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 3, color = "#4D495A") + 
-  #coord_equal() +
-  theme_classic()
-
-ordiplot(NMDS_environ)
 
 
 
