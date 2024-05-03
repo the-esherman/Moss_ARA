@@ -140,30 +140,7 @@ EM50_Wetland.1 <- EM50_Wetland %>%
 EM50_Wetland.2 <- EM50_Wetland.1 %>%
   select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
   filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
-
-
-
-
-EM50_Heath.1 %>%
-  ggplot() + geom_point(aes(x = Date_time, y = Soil_moisture))
-
-EM50_Heath.1 %>%
-  ggplot() + geom_point(aes(x = Date_time, y = Soil_temperature))
-
-EM50_Heath.1 %>%
-  #filter(Date_time >= ymd(20210601) & Date_time <= ymd(20210630)) %>%
-  ggplot() + geom_point(aes(x = Date_time, y = PAR))
-
-EM50_Wetland.1 %>%
-  ggplot() + geom_point(aes(x = Date_time, y = Soil_moisture))
-
-EM50_Wetland.1 %>%
-  ggplot() + geom_point(aes(x = Date_time, y = Soil_temperature))
-
-EM50_Wetland.1 %>%
-  ggplot() + geom_point(aes(x = Date_time, y = PAR))
-
-
+#
 #
 #
 #------- • Field data -------
@@ -171,7 +148,7 @@ EM50_Wetland.1 %>%
 # Remove chamber test and combine with temperature
 field_ARA.2 <- field_ARA %>%
   filter(Species != "B") %>%
-  # Round timestamp to nearest hour!
+  # Round time stamp to nearest hour!
   mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
   mutate(Tid = round_date(ymd_hms(Date_time), unit = "hour")) %>%
   mutate(Tid = hms::as_hms(Tid)) %>%
@@ -302,17 +279,14 @@ field_ARA_wide.4 <- field_ARA_wide.3 %>%
 # Set negative production to 0
 field_ARA_wide.5 <- field_ARA_wide.4 %>%
   mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
-
-field_ARA_wide.export <- field_ARA_wide.5 %>%
-  select(Block, Species, Round, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
-  rename("AirT" = AirT_C)
-
-
-#write_csv(field_ARA_wide.export, "export/Q1_ARA2.csv", na = "NA")
-
-
-ggplot(data = field_ARA_wide.5, aes(x = Et_prod_umol_h_m2)) + geom_histogram()
-
+#
+# Export main results
+# field_ARA_wide.export <- field_ARA_wide.5 %>%
+#   select(Block, Species, Round, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
+#   rename("AirT" = AirT_C)
+#
+# write_csv(field_ARA_wide.export, "export/Q1_ARA2.csv", na = "NA")
+#
 #
 #
 #------- • Vial data -------
@@ -368,14 +342,15 @@ field_environ.3 <- field_ARA_wide.5 %>%
   select(-AirT_C) %>%
   mutate(Round = as.factor(Round)) %>%
   pivot_wider(values_from = Et_prod_umol_h_m2, names_from = Species)
-
+#
 # Export
 # write_csv(field_environ.3, "export/N2fix_environ2.csv")
 #
 #
 # Correlation plot of environmental data
 corrplot::corrplot(cor(field_environ.3[6:3], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
-# All somewhat correlated
+corrplot::corrplot(cor(field_environ.3[16:3], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+# All somewhat correlated environmental factors
 #
 # NMDS
 NMDS_environ <- metaMDS(field_environ.3[3:6], distance = "bray")#, scaling = 1, autotransform = TRUE) # Does a sqrt transformation and Wisconsin standardization
@@ -402,313 +377,33 @@ field_environ.plot$NMDS1 <- NMDS_environ$points[,1]
 field_environ.plot$NMDS2 <- NMDS_environ$points[,2]
 #
 # For text
+# Environmental factors
 field_environ.scores.env <- as.data.frame(scores(NMDS_environ, "species"))
 field_environ.scores.env$Factors <- rownames(field_environ.scores.env)
+#
+field_environ.scores.env <- field_environ.scores.env %>%
+  mutate(Factors = case_when(Factors == "Soil_temperature" ~ "Soil temperature",
+                             Factors == "Soil_moisture" ~ "Soil moisture",
+                             Factors == "AirT" ~ "Air temperature",
+                             TRUE ~ Factors))
+# Species directions
 field_environ.scores.sp <- as.data.frame(scores(envfit.et$vectors$arrows))
 field_environ.scores.sp$Species <- rownames(field_environ.scores.sp)
+# Decrease arrow size, so direction can be plotted with the main NMDS plot
+field_environ.scores.sp <- field_environ.scores.sp %>%
+  mutate(NMDS1 = NMDS1/3,
+         NMDS2 = NMDS2/4)
 #
 #
+# Plot the NMDS
 ggplot() +
   geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
   geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
-#  geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
-#  geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 5, color = "#4D495A") + 
-  coord_equal() +
-  theme_classic() +
-  theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21))
-#
-plot2 <- ggplot() +
-  geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
-  #geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
-  #geom_text(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, label = Round)) +
   geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
-  geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 3, color = "#4D495A") + 
-  #coord_equal() +
-  theme_classic()
-
-
-
-
-###################
-
-
-plot_21_ITS <- ggplot(data = subset(data$map_19, Treatment != "Gradient"))+
-  geom_point(aes(x=PC1_ITS, y=PC2_ITS, col= Treatment, pch =Block), size = 6)+ 
-  theme_classic() + 
-  theme(legend.text = element_text(size=21), legend.title = element_text(size = 21))+ 
-  scale_color_manual("Removal Treatment", values = colors_trt, labels = label_trt) + 
-  stat_ellipse(aes(x=PC1_ITS, y=PC2_ITS, col = Treatment), level = 0.75, lty = 2) + 
-  #annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
-  geom_segment(data = envfit_split$ITS_21_trt,
-               aes(x = 0, xend = Dim1, y = 0, yend = Dim2),
-               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
-  geom_text_repel(data = envfit_split$ITS_21_trt, aes(x = Dim1, y = Dim2, 
-                                                      label  = Var, size = 7, color = "#4D495A")+ 
-                    xlab (label.x_21_ITS) + ylab(label.y_21_ITS))
-
-
-
-
-
-ggplot() + 
-  geom_text(data=species.scores,aes(x=NMDS1,y=NMDS2,label=species),alpha=0.5) +  # add the species labels
-  geom_point(data=data.scores,aes(x=NMDS1,y=NMDS2),size=3) + # add the point markers
-  geom_text(data=data.scores,aes(x=NMDS1,y=NMDS2,label=site),size=6,vjust=0) +  # add the site labels
-  scale_colour_manual(values=c("A" = "red", "B" = "blue")) +
+  geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 5, color = "#4D495A") + 
   coord_equal() +
-  theme_bw()
-
-
-
-
-
-
-x <- scores(NMDS_environ, "site")
-x$sites[,1]
-
-data.scores <- as.data.frame(scores(NMDS_environ, "site"))  #Using the scores function from vegan to extract the site scores and convert to a data.frame
-data.scores$site <- rownames(data.scores)  # create a column of site names, from the rownames of data.scores
-head(data.scores)  #look at the data
-species.scores <- as.data.frame(scores(NMDS_environ, "species"))  #Using the scores function from vegan to extract the species scores and convert to a data.frame
-species.scores$species <- rownames(species.scores)  # create a column of species, from the rownames of species.scores
-head(species.scores)  #look at the data
-
-ggplot() + 
-  geom_text(data=species.scores,aes(x=NMDS1,y=NMDS2,label=species),alpha=0.5) +  # add the species labels
-  geom_point(data=data.scores,aes(x=NMDS1,y=NMDS2),size=3) + # add the point markers
-  geom_text(data=data.scores,aes(x=NMDS1,y=NMDS2,label=site),size=6,vjust=0) +  # add the site labels
-  scale_colour_manual(values=c("A" = "red", "B" = "blue")) +
-  coord_equal() +
-  theme_bw()
-
-
-
-
-
-plot(envfit.et, cex=1.2, axis=TRUE, bg = rgb(1, 1, 1, 0.5))
-
-
-
-
-
-corrplot::corrplot(Field_environ.y[4:8], type = "upper", order = "hclust", tl.col = "black", tl.srt =  45)
-
-
-
-
-# Modified from https://stirlingcodingclub.github.io/ordination/
-x <- Field_environ.1
-x <- scale(x)
-PCA_environ <- prcomp(x)
-B_rw <- which(Field_environ[,1] == "B")
-P_rw <- which(Field_environ[,1] == "P")
-R_rw <- which(Field_environ[,1] == "R")
-W_rw <- which(Field_environ[,1] == "W")
-Y_rw <- which(Field_environ[,1] == "Y")
-plot(x = PCA_environ$x[,1], y = PCA_environ$x[,2], asp = 1, cex.lab = 1.25, 
-     cex.axis = 1.25, xlab = "PC1", ylab = "PC2")
-points(x = PCA_environ$x[B_rw,1], y = PCA_environ$x[B_rw,2], pch = 20, col = "blue")
-points(x = PCA_environ$x[P_rw,1], y = PCA_environ$x[P_rw,2], pch = 20, col = "purple")
-points(x = PCA_environ$x[R_rw,1], y = PCA_environ$x[R_rw,2], pch = 20, col = "red")
-points(x = PCA_environ$x[W_rw,1], y = PCA_environ$x[W_rw,2], pch = 20, col = "white")
-points(x = PCA_environ$x[Y_rw,1], y = PCA_environ$x[Y_rw,2], pch = 20, col = "yellow")
-biplot(PCA_environ, cex = 0.8, asp = 1)
-
-
-rankindex(Field_environ.x)
-
-NMDS_environ <- metaMDS(Field_environ.x, distance = "bray")#, scaling = 1, autotransform = TRUE)
-
-
-
-NMDS_environ$points[,2]
-
-
-
-
-
-
-# PCoA instead?
-
-Field_environ.y <- Field_environ %>%
-  left_join(Field_species, by = join_by(Block, Species, Round))
-
-#write_csv(Field_environ.y, "export/N2fix_environ.csv")
-
-# Only Aulocomium
-Field_environ.Au <- Field_environ.y %>%
-  mutate(Round = as.factor(Round)) %>%
-  filter(Species == "Au")
-
-Field_environ_dis.Au <- vegdist(Field_environ.Au[4:7]) # Bray-Curtis
-PCOA_environ.Au <- cmdscale(Field_environ_dis.Au, add=T, eig=T)
-
-plot(PCOA_environ.Au$points, xlab="PCoA 1", ylab="PCoA 2")
-
-Field_environ.Au$PC1 <- PCOA_environ.Au$points[,1] # axis 1
-Field_environ.Au$PC2 <- PCOA_environ.Au$points[,2] # axis 2
-
-envfit_Au <- envfit(PCOA_environ.Au,
-       Field_environ.Au[8],
-       permutations = 99999, na.rm = TRUE)
-env_Au <- data.frame(scores(envfit_Au, display = "vectors"))
-env_Au <- cbind(env_Au,
-               Var = rownames(env_Au),
-               Pvalues = envfit_Au$vectors$pvals,
-               R_squared = envfit_Au$vectors$r)
-env_Au$comm <- "Au"
-
-
-label.x_Au <- paste("PC1 (", plyr::round_any((PCOA_environ.Au$eig/sum(PCOA_environ.Au$eig))[1]*100, accuracy = 0.01), "%)", sep = "") # PC1 % variance explained
-label.y_Au <- paste("PC2 (", plyr::round_any((PCOA_environ.Au$eig/sum(PCOA_environ.Au$eig))[2]*100, accuracy = 0.01), "%)", sep = "") # PC2 % variance explained
-
-# Field_environ.yy <- Field_environ.Au.x %>%
-#   mutate(Round = as.factor(Round)) %>%
-#   filter(Species == "Au")
-
-
-
-#plot_environ <- 
-Field_environ.Au %>%
-  ggplot() +
-  geom_point(aes(x = PC1, y = PC2, col = Round, pch = Block), size = 6) + 
-  theme_classic() + 
-  theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21)) + 
-  #scale_color_manual("Species", values = colors_trt, labels = label_trt) + 
-  stat_ellipse(aes(x = PC1, y = PC2, col = Round), level = 0.75, lty = 2) +
-#annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
-  geom_segment(data = env_Au,
-               aes(x = 0, xend = Dim1, y = 0, yend = Dim2),
-               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
-  ggrepel::geom_text_repel(data = env_Au, aes(x = Dim1, y = Dim2, label  = "Ethylene"), size = 7, color = "#4D495A") + 
-  xlab(label.x_Au) + 
-  ylab(label.y_Au)
-
-
-# PCA instead?
-# Scale environmental factors for Au
-Field_environ.Au.scaled <- scale(Field_environ.Au[4:7])
-#PCA_environ.Au <- prcomp(Field_environ.Au.scaled) # Alternative scaling by: scale. = TRUE
-PCA_environ.Au <- prcomp(Field_environ.Au[4:7], center = TRUE, scale. = TRUE)
-PCA_environ.Au.2 <- princomp(Field_environ.Au.scaled) # Alternative not scaling, but using correlation matrix: cor = TRUE
-PCA_environ.Au.3 <- rda(Field_environ.Au.scaled) # Is it really the same as a PCA, if nothing is changed within the function?
-
-# Plot the different PCA versions
-ordiplot(PCA_environ.Au)
-ordiplot(PCA_environ.Au.2) # exactly the same as previous, but rotated differently
-ordiplot(PCA_environ.Au.3) # Something else
-
-summary(PCA_environ.Au.2, loadings = TRUE, cutoff = 0)
-
-# Fit the ethylene production
-envfit_Au.2 <- envfit(PCA_environ.Au,
-                    Field_environ.Au[8],
-                    permutations = 99999, na.rm = TRUE)
-env_Au.2 <- data.frame(scores(envfit_Au.2, display = "vectors"))
-env_Au.2 <- cbind(env_Au.2,
-                Var = rownames(env_Au.2),
-                Pvalues = envfit_Au.2$vectors$pvals,
-                R_squared = envfit_Au.2$vectors$r)
-
-# Extract PC scores
-Field_environ.Au.2 <- Field_environ.Au
-Field_environ.Au.2$PC1 <- PCA_environ.Au$x[,1]
-Field_environ.Au.2$PC2 <- PCA_environ.Au$x[,2]
-
-
-# PC scores for label
-label.x_Au.2 <- paste("PC1 (", plyr::round_any((PCA_environ.Au$sdev/sum(PCA_environ.Au$sdev))[1]*100, accuracy = 0.01), "%)", sep = "") # PC1 % variance explained
-label.y_Au.2 <- paste("PC2 (", plyr::round_any((PCA_environ.Au$sdev/sum(PCA_environ.Au$sdev))[2]*100, accuracy = 0.01), "%)", sep = "") # PC2 % variance explained
-
-
-Field_environ.Au.2 %>%
-  ggplot() +
-  geom_point(aes(x = PC1, y = PC2, col = Round, pch = Block)) +
-  stat_ellipse(aes(x = PC1, y = PC2, col = Round), level = 0.75, lty = 2) +
-  #annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
-  geom_segment(data = env_Au.2,
-               aes(x = 0, xend = PC1, y = 0, yend = PC2),
-               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
-  ggrepel::geom_text_repel(data = env_Au.2, aes(x = PC1, y = PC2, label  = "Ethylene"), size = 7, color = "#4D495A") +
-  xlab(label.x_Au.2) +
-  ylab(label.y_Au.2) +
   theme_classic() +
   theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21))
-  
-
-
-
-
-# From Leah
-## combine community and environmental data and calculate distances
-otus_21_ITS <-   #this is the community data
-map_21_ITS <-  # this is the environmental  data
-all.equal(rownames(map_21_ITS),rownames(otus_21_ITS)) #check that row order is the same
-dm_21_ITS<-vegdist(otus_21_ITS) #calculate distances with bray-curtis
-
-#PCoA and envfit
-pcoa_21_ITS<-cmdscale(dm_21_ITS,add=T,eig=T) #do PCoA
-map_21_ITS$PC1_ITS<-pcoa_21_ITS$points[,1] #extract axis 1
-map_21_ITS$PC2_ITS<-pcoa_21_ITS$points[,2] #extract axis 2
-relevant_varaibles <- c("insert your variables for envfit here")
-#run envfit
-envfit_ITS_21 <- envfit(pcoa_21_ITS, 
-                        select(map_21_ITS, all_of(relevant_variables_21)), 
-                        permutations = 99999,na.rm = TRUE) 
-#convert enfvit results to dataframe
-env_21_ITS_a <- data.frame(scores(envfit_ITS_21, display = "vectors"))
-env_21_ITS_a <- cbind(env_21_ITS_a, 
-                      Var = rownames(env_21_ITS_a), 
-                      Pvalues = envfit_ITS_21$vectors$pvals, 
-                      R_squared = envfit_ITS_21$vectors$r)
-env_21_ITS_a$comm <- "ITS_21_trt"
-
-
-label.x_21_ITS<-paste("PC1 (",plyr::round_any((data$pcoa_21_ITS$eig/sum(data$pcoa_21_ITS$eig))[1]*100,accuracy=0.01),"%)",sep="") # PC1 % variance explained
-label.y_21_ITS<-paste("PC2 (",plyr::round_any((data$pcoa_21_ITS$eig/sum(data$pcoa_21_ITS$eig))[2]*100,accuracy=0.01),"%)",sep="") # PC2 % variance explained
-
-plot_21_ITS <- ggplot(data = subset(data$map_19, Treatment != "Gradient"))+
-  geom_point(aes(x=PC1_ITS, y=PC2_ITS, col= Treatment, pch =Block), size = 6)+ 
-  theme_classic() + 
-  theme(legend.text = element_text(size=21), legend.title = element_text(size = 21))+ 
-  scale_color_manual("Removal Treatment", values = colors_trt, labels = label_trt) + 
-  stat_ellipse(aes(x=PC1_ITS, y=PC2_ITS, col = Treatment), level = 0.75, lty = 2) + 
-  #annotate("text",x=c(0.4),y=c(-0.75),label="Treatment n.s.\n Block***",size=5)+  
-  geom_segment(data = envfit_split$ITS_21_trt,
-               aes(x = 0, xend = Dim1, y = 0, yend = Dim2),
-               arrow = arrow(length = unit(0.25, "cm")), colour = "#8fa3a5") +
-  geom_text_repel(data = envfit_split$ITS_21_trt, aes(x = Dim1, y = Dim2, 
-                                                      label  = Var, size = 7, color = "#4D495A")+ 
-                    xlab (label.x_21_ITS) + ylab(label.y_21_ITS))
-
-
-
-
-# Modified from
-# https://www.davidzeleny.net/anadat-r/doku.php/en:pcoa_nmds
-# Code https://www.davidzeleny.net/anadat-r/doku.php/en:pcoa_nmds_rscript
-plot (NMDS_environ, main = 'NMDS', type = 'n')#, display = 'si')
-points (NMDS_environ, col = field_environ.3$Round, pch = field_environ.3$Round) # , display = 'si'
-legend ('bottomleft', pch = 1:11, col = 1:11, legend = 1:11, title = 'Round', cex = 0.8)
-text(NMDS_environ, display = "spec", cex=0.7, col="blue")
-
-text (NMDS_environ, col = "#FF000080", cex = 0.6, select = colSums (vltava.spe>0)>20) # , display = 'sp'
-
-vltava.spe <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/vltava-spe.txt', row.names = 1)
-vltava.env <- read.delim ('https://raw.githubusercontent.com/zdealveindy/anadat-r/master/data/vltava-env.txt')
-
-
-
-
-pairs(x = Field_environ.1, gap = 0, cex.labels = 0.5)
-Field_environ_cor <- cor(Field_environ.2, method = "kendall")
-corrplot::corrplot(Field_environ_cor, type = "upper", order = "hclust", tl.col = "black", tl.srt =  45)
-
-
-PCA_field <- rda( ~ . ,Field_environ)
-ordiplot(PCA_environ, type = "t")
-
-
 #
 #
 #
