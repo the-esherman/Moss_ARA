@@ -330,7 +330,9 @@ vial_ARA.3 %>%
 #mutate(across(Timestamp, ~hm(.x)))# %>%
 #
 #
-#------- • Temperature, moisture and PAR -------
+#
+#=======  §§  Statistics    §§ =======
+#-------  »   Environmental NMDS « -------
 #
 # 
 # Extract environmental data
@@ -407,7 +409,6 @@ ggplot() +
 #
 #
 #
-#=======  §§  Statistics    §§ =======
 #-------  »   Q1            « -------
 # 1.	How active can mosses potentially be in their N2-fixation depending on moisture, temperature, and light availability?
 #
