@@ -103,11 +103,13 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 #
 #
 #------- • Environmental -------
+# Air temperature based on wetland measurements. Difference is minimal
 AirT_wetland.1 <- AirT_wetland %>%
   select(Date, Time, AirT_C) %>%
   rename("Tid" = Time)
-
-
+#
+# Soil temperature, moisture, and PAR are based on Heathland measurements
+# Values are averaged across the five blocks for soil temperature and moisture and moisture is converted to per cent.
 EM50_Heath.1 <- EM50_Heath %>%
   rowwise() %>%
   mutate(Soil_moisture = mean(c(Soil_moisture_B, Soil_moisture_P, Soil_moisture_R, Soil_moisture_W, Soil_moisture_Y, Soil_moisture_G), na.rm = TRUE),
@@ -118,14 +120,16 @@ EM50_Heath.1 <- EM50_Heath %>%
   separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time"), too_few = "debug", too_many = "debug") %>%
   mutate(Date = ymd(Date),
          Tid = hms::as_hms(Time)) 
-
+#
 EM50_Heath.2 <- EM50_Heath.1 %>%
   select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
   filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
-
+#
+# Save data
 # write_csv(EM50_Heath.2, "Data_clean/Heath_EM50_simple.csv")
-
-
+#
+# Soil temperature, moisture and PAR from wetland
+# Values are averaged across the five blocks for soil temperature and moisture and moisture is converted to per cent.
 EM50_Wetland.1 <- EM50_Wetland %>%
   rowwise() %>%
   mutate(Soil_moisture = mean(c(Soil_moisture_B, Soil_moisture_P, Soil_moisture_R, Soil_moisture_W, Soil_moisture_Y, Soil_moisture_G), na.rm = TRUE),
@@ -136,7 +140,7 @@ EM50_Wetland.1 <- EM50_Wetland %>%
   separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time"), too_few = "debug", too_many = "debug") %>%
   mutate(Date = ymd(Date),
          Tid = hms::as_hms(Time)) 
-
+#
 EM50_Wetland.2 <- EM50_Wetland.1 %>%
   select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
   filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
@@ -291,7 +295,7 @@ field_ARA_wide.5 <- field_ARA_wide.4 %>%
 #
 #------- • Vial data -------
 #
-# 
+# Load and select important parts of the vial data
 vial_ARA.1 <- vial_ARA %>%
   mutate(Species = str_replace_all(Species, "M", "B")) %>% #Replace M for Myren with B for Blank
   filter(!str_starts(Species, "v")) #Remove vial tests
@@ -319,9 +323,10 @@ vial_ARA.2 <- vial_ARA.1 %>%
                                    TRUE ~ Temp_approx_C)) %>%
   mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * Temp_approx_C+273) / Vial_area_m2)
 #
+# Ethylene production is either greater than 0 or 0. No negative values
 vial_ARA.3 <- vial_ARA.2 %>%
   mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
-
+#
 vial_ARA.3 %>%
   ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species)
 
