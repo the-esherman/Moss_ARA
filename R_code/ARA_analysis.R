@@ -357,6 +357,8 @@ field_environ.3 <- field_ARA_wide.5 %>%
 # Correlation plot of environmental data
 corrplot::corrplot(cor(field_environ.3[6:3], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
 corrplot::corrplot(cor(field_environ.3[16:3], method = "kendall"), type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+pairs(x = field_environ.3[6:3], gap = 0, cex.labels = 0.5)
+pairs(x = field_environ.3[16:3], gap = 0, cex.labels = 0.5)
 # All somewhat correlated environmental factors
 #
 # NMDS
@@ -431,6 +433,7 @@ Q1_ARA <- Q1_ARA %>%
          ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
          arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))))
 #
+# Linear mixed effects model with both species and round
 lme1 <- lme(logEt_prod ~ Round*Species,
             random = ~1|Block/Species,
             data = Q1_ARA, na.action = na.exclude, method = "REML")
@@ -446,13 +449,12 @@ qqnorm(resid(lme1), main = "Normally distributed?")
 qqline(resid(lme1), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lme1)
 par(mfrow = c(1,1))
+# Values are not very good because of several zero values.
 #
 # model output
 Anova(lme1, type=2)
 #
-#
-
-
+# Plot ethylene production across the seasons
 Q1_ARA %>%
   mutate(MP = case_when(Round == 1 ~ "Sept20",
                         Round == 2 ~ "Oct20",
@@ -467,12 +469,21 @@ Q1_ARA %>%
                         Round == 11 ~ "Nov21")) %>%
   mutate(across(MP, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
   ggplot(aes(y = Et_prod_umol_h_m2, x = MP)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
-
-
-
+# There are mostly zero values
+# These zeros could either be true zeros and suggest no activity at all, or activity below detection.
+#
+# A right-skewed Poisson distribution?
+Q1_ARA %>%
+#  filter(Et_prod_umol_h_m2 > 0) %>% # & Et_prod_umol_h_m2 < 10 Remove zeros (and extreme values)
+  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram() 
+#  ggplot(aes(x = log(Et_prod_umol_h_m2+1))) + geom_histogram()
+#
+# Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMP package was used
+# Production is square-root transformed
 model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
-
+#
+# On a per species level
 # Au
 modelAu <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Au",], ziformula=~1, family=gaussian)
 Anova(modelAu, type = c("II"), test.statistic = c("Chi"), component = "cond")
