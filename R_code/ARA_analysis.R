@@ -348,7 +348,9 @@ field_environ.3 <- field_ARA_wide.5 %>%
          Soil_temperature = Soil_temperature + 273) %>% # remove negative temperature by converting to kelvin
   select(-AirT_C) %>%
   mutate(Round = as.factor(Round)) %>%
-  pivot_wider(values_from = Et_prod_umol_h_m2, names_from = Species)
+  pivot_wider(values_from = Et_prod_umol_h_m2, names_from = Species) %>%
+  filter(Round != "1")
+#  mutate(PAR = if_else(Round == "1", NA, PAR))
 #
 # Export
 # write_csv(field_environ.3, "export/N2fix_environ2.csv")
@@ -384,6 +386,24 @@ par (mfrow = c(1,1))
 field_environ.plot <- field_environ.3
 field_environ.plot$NMDS1 <- NMDS_environ$points[,1]
 field_environ.plot$NMDS2 <- NMDS_environ$points[,2]
+field_environ.plot <- field_environ.plot %>%
+  mutate(season = case_when(Round == "1" | Round == "2" | Round == "3" ~ "Fall1",
+                         Round == "10" | Round == "11" ~ "Fall2",
+                         Round == "4" ~ "Winter",
+                         Round == "5" | Round == "6" ~ "Spring",
+                         Round == "7" | Round == "8" | Round == "9" ~ "Summer"),
+         snowS = if_else(str_detect(Round, "3|4|5|6"), "Snow", "Free"),
+         month = case_when(Round == "1" ~ "Sep20",
+                           Round == "2" ~ "Oct20",
+                           Round == "3" ~ "Nov20",
+                           Round == "4" ~ "Feb",
+                           Round == "5" ~ "Mar",
+                           Round == "6" ~ "May",
+                           Round == "7" ~ "Jun",
+                           Round == "8" ~ "Jul",
+                           Round == "9" ~ "Aug",
+                           Round == "10" ~ "Sep",
+                           Round == "11" ~ "Nov",))
 #
 # For text
 # Environmental factors
@@ -406,8 +426,9 @@ field_environ.scores.sp <- field_environ.scores.sp %>%
 #
 # Plot the NMDS
 ggplot() +
+#  geom_polygon(data=field_environ.plot,aes(x=NMDS1,y=NMDS2,fill=snowS,group=snowS),alpha=0.30) +
   geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
-  geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = Round), size = 3) +
+  geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = month), size = 3) +
   geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
   geom_text_repel(data = field_environ.scores.sp, aes(x = NMDS1, y = NMDS2, label  = Species), size = 5, color = "#4D495A") + 
   coord_equal() +
@@ -478,12 +499,22 @@ Q1_ARA %>%
   ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram() 
 #  ggplot(aes(x = log(Et_prod_umol_h_m2+1))) + geom_histogram()
 #
+#
 # Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMP package was used
 # Production is square-root transformed
 model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
+emmeans(model,"Species")
 #
-# On a per species level
+model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR+Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
+Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
+emmeans(model2,"Species")
+#
+#
+# >>>>>>>>> On a per species level <<<<<<<<<
+# >>>>>>>>> Simply modelled against round <<<<<<<<<
+#
+#
 # Au
 modelAu <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Au",], ziformula=~1, family=gaussian)
 Anova(modelAu, type = c("II"), test.statistic = c("Chi"), component = "cond")
@@ -495,35 +526,6 @@ emmeans(modelAu,"Round")
 # Di
 modelDi <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
 Anova(modelDi, type = c("II"), test.statistic = c("Chi"), component = "cond")
-#
-# PAR removed as very low probability
-modelDi2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_temperature*Soil_moisture,data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
-Anova(modelDi2, type = c("II"), test.statistic = c("Chi"), component = "cond")
-
-modelDi3 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_moisture,data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
-Anova(modelDi3, type = c("II"), test.statistic = c("Chi"), component = "cond")
-
-Q1_ARA %>%
-  filter(Species == "Di") %>%
-  ggplot() +
-  geom_point(aes(x = Soil_moisture, y = sqrt(Et_prod_umol_h_m2)))
-
-Q1_ARA %>%
-  filter(Species == "Di") %>%
-  ggplot() +
-  geom_point(aes(x = factor(Round, levels = order(levels(Round))), y = Soil_moisture))
-
-Q1_ARA %>%
-  #filter(Species == "Di") %>%
-  ggplot() +
-  geom_point(aes(x = Soil_temperature, y = Soil_moisture))
-
-Q1_ARA %>%
-  #filter(Species == "Di") %>%
-  ggplot() +
-  geom_point(aes(x = Soil_temperature, y = Soil_moisture))
-
-
 # χ     DF    p
 # 202.97 10  < 2.2e-16
 emmeans(modelDi,"Round")
@@ -532,21 +534,6 @@ emmeans(modelDi,"Round")
 # Hy
 modelHy <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
 Anova(modelHy, type = c("II"), test.statistic = c("Chi"), component = "cond")
-
-modelHy2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
-modelHy2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_temperature*Soil_moisture+PAR,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
-Anova(modelHy2, type = c("II"), test.statistic = c("Chi"), component = "cond")
-
-Q1_ARA %>%
-  filter(Species == "Hy") %>%
-  ggplot() +
-  geom_point(aes(x = Soil_temperature, y = sqrt(Et_prod_umol_h_m2)))
-
-Q1_ARA %>%
-  filter(Species == "Di") %>%
-  ggplot() +
-  geom_point(aes(x = PAR, y = Soil_moisture))
-
 # χ     DF    p
 # 249.08 10  < 2.2e-16
 emmeans(modelHy,"Round")
@@ -608,14 +595,87 @@ Anova(modelSli, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(modelSli,"Round")
 #
 #
-
-
-
-
-
-x <- summarySE(Q1_ARA, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
-
-
+# >>>>>>>>> Environmental factors instead of round <<<<<<<<<
+#
+#
+# Au
+modelAu_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Au",], ziformula=~1, family=gaussian)
+Anova(modelAu_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 113.6 10  < 2.2e-16 
+emmeans(modelAu_en,"Round")
+#
+#
+# Di
+modelDi_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
+Anova(modelDi_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 202.97 10  < 2.2e-16
+emmeans(modelDi_en,"Round")
+#
+#
+# Hy
+modelHy_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
+Anova(modelHy_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 249.08 10  < 2.2e-16
+emmeans(modelHy_en,"Round")
+#
+#
+# Pl
+modelPl_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Pl",], ziformula=~1, family=gaussian)
+Anova(modelPl_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 182.64 10  < 2.2e-16
+emmeans(modelPl_en,"Round")
+#
+#
+# Po
+modelPo_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Po",], ziformula=~1, family=gaussian)
+Anova(modelPo_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 215.56 10  < 2.2e-16
+emmeans(modelPo_en,"Round")
+#
+#
+# Pti
+modelPti_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Pti",], ziformula=~1, family=gaussian)
+Anova(modelPti_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 53.974 10  4.906e-08
+emmeans(modelPti_en,"Round")
+#
+#
+# Ra
+modelRa_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Ra",], ziformula=~1, family=gaussian)
+Anova(modelRa_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 40.684 10  1.283e-05
+emmeans(modelRa_en,"Round")
+#
+#
+# S
+modelS_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="S",], ziformula=~1, family=gaussian)
+Anova(modelS_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 35.241 10  0.0001136
+emmeans(modelS_en,"Round")
+#
+#
+# Sf
+modelSf_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Sf",], ziformula=~1, family=gaussian)
+Anova(modelSf_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 81.666 10  2.366e-13
+emmeans(modelSf_en,"Round")
+#
+#
+# Sli
+modelSli_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR, data=Q1_ARA[Q1_ARA$Species=="Sli",], ziformula=~1, family=gaussian)
+Anova(modelSli_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ     DF    p
+# 161.95 10  < 2.2e-16
+emmeans(modelSli_en,"Round")
 #
 #
 #
