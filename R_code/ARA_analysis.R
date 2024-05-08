@@ -349,7 +349,12 @@ field_environ.3 <- field_ARA_wide.5 %>%
   select(-AirT_C) %>%
   mutate(Round = as.factor(Round)) %>%
   pivot_wider(values_from = Et_prod_umol_h_m2, names_from = Species) %>%
-  filter(Round != "1")
+  filter(Round != "1") 
+
+# Find from station!!!
+
+
+
 #  mutate(PAR = if_else(Round == "1", NA, PAR))
 #
 # Export
@@ -506,13 +511,13 @@ model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species ,data=Q1_ARA, z
 Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model,"Species")
 #
-model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moisture+PAR+Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
+model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model2,"Species")
 #
 #
 # >>>>>>>>> On a per species level <<<<<<<<<
-# >>>>>>>>> Simply modelled against round <<<<<<<<<
+# >>>>>>>>> Simply modeled against round <<<<<<<<<
 #
 #
 # Au
@@ -603,7 +608,7 @@ modelAu_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moi
 Anova(modelAu_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 113.6 10  < 2.2e-16 
-emmeans(modelAu_en,"Round")
+emmeans(modelAu_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Di
@@ -611,7 +616,7 @@ modelDi_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moi
 Anova(modelDi_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 202.97 10  < 2.2e-16
-emmeans(modelDi_en,"Round")
+emmeans(modelDi_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Hy
@@ -619,7 +624,7 @@ modelHy_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moi
 Anova(modelHy_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 249.08 10  < 2.2e-16
-emmeans(modelHy_en,"Round")
+emmeans(modelHy_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Pl
@@ -627,7 +632,7 @@ modelPl_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moi
 Anova(modelPl_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 182.64 10  < 2.2e-16
-emmeans(modelPl_en,"Round")
+emmeans(modelPl_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Po
@@ -635,7 +640,7 @@ modelPo_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moi
 Anova(modelPo_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 215.56 10  < 2.2e-16
-emmeans(modelPo_en,"Round")
+emmeans(modelPo_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Pti
@@ -643,7 +648,7 @@ modelPti_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_mo
 Anova(modelPti_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 53.974 10  4.906e-08
-emmeans(modelPti_en,"Round")
+emmeans(modelPti_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Ra
@@ -651,7 +656,7 @@ modelRa_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moi
 Anova(modelRa_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 40.684 10  1.283e-05
-emmeans(modelRa_en,"Round")
+emmeans(modelRa_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # S
@@ -659,7 +664,7 @@ modelS_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_mois
 Anova(modelS_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 35.241 10  0.0001136
-emmeans(modelS_en,"Round")
+emmeans(modelS_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Sf
@@ -667,7 +672,7 @@ modelSf_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_moi
 Anova(modelSf_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 81.666 10  2.366e-13
-emmeans(modelSf_en,"Round")
+emmeans(modelSf_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 # Sli
@@ -675,7 +680,7 @@ modelSli_en <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C+Soil_temperature+Soil_mo
 Anova(modelSli_en, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ     DF    p
 # 161.95 10  < 2.2e-16
-emmeans(modelSli_en,"Round")
+emmeans(modelSli_en, ~ AirT_C+Soil_temperature+Soil_moisture+PAR)
 #
 #
 #
