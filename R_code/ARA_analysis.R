@@ -352,6 +352,7 @@ field_environ.3 <- field_ARA_wide.5 %>%
   filter(Round != "1") 
 
 # Find from station!!!
+# Or from WinterEcology I -> last measurements were in beginning of October
 
 
 
@@ -398,6 +399,11 @@ field_environ.plot <- field_environ.plot %>%
                          Round == "5" | Round == "6" ~ "Spring",
                          Round == "7" | Round == "8" | Round == "9" ~ "Summer"),
          snowS = if_else(str_detect(Round, "3|4|5|6"), "Snow", "Free"),
+         # snowS = case_when(str_detect(Round, "3|4|5") ~ "Snow",
+         #                   Round == "6" & Block == "W" ~ "Snow",
+         #                   Round == "6" & Block == "P" ~ "Snow", 
+         #                   Round == "6" & Block == "R" ~ "Snow",
+         #                   TRUE ~ "Free"),
          month = case_when(Round == "1" ~ "Sep20",
                            Round == "2" ~ "Oct20",
                            Round == "3" ~ "Nov20",
@@ -507,11 +513,11 @@ Q1_ARA %>%
 #
 # Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMP package was used
 # Production is square-root transformed
-model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
+model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
-emmeans(model,"Species")
+emmeans(model, ~ Species*Round)
 #
-model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA, ziformula=~1, family=gaussian)
+model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model2,"Species")
 #
@@ -523,80 +529,80 @@ emmeans(model2,"Species")
 # Au
 modelAu <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Au",], ziformula=~1, family=gaussian)
 Anova(modelAu, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 113.6 10  < 2.2e-16 
+# χ       DF    p
+# 110.15  10  < 2.2e-16 
 emmeans(modelAu,"Round")
 #
 #
 # Di
 modelDi <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Di",], ziformula=~1, family=gaussian)
 Anova(modelDi, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 202.97 10  < 2.2e-16
+# χ       DF    p
+# 200.1   10  < 2.2e-16
 emmeans(modelDi,"Round")
 #
 #
 # Hy
 modelHy <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Hy",], ziformula=~1, family=gaussian)
 Anova(modelHy, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 249.08 10  < 2.2e-16
+# χ       DF    p
+# 206.92  10  < 2.2e-16
 emmeans(modelHy,"Round")
 #
 #
 # Pl
 modelPl <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Pl",], ziformula=~1, family=gaussian)
 Anova(modelPl, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 182.64 10  < 2.2e-16
+# χ       DF    p
+# 184.29  10  < 2.2e-16
 emmeans(modelPl,"Round")
 #
 #
 # Po
 modelPo <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Po",], ziformula=~1, family=gaussian)
 Anova(modelPo, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 215.56 10  < 2.2e-16
+# χ       DF    p
+# 224.88  10  < 2.2e-16
 emmeans(modelPo,"Round")
 #
 #
 # Pti
 modelPti <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Pti",], ziformula=~1, family=gaussian)
 Anova(modelPti, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 53.974 10  4.906e-08
+# χ       DF    p
+# 58.75   10    6.242e-09
 emmeans(modelPti,"Round")
 #
 #
 # Ra
 modelRa <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Ra",], ziformula=~1, family=gaussian)
 Anova(modelRa, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 40.684 10  1.283e-05
+# χ       DF    p
+# 40.133  10    1.605e-05
 emmeans(modelRa,"Round")
 #
 #
 # S
 modelS <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="S",], ziformula=~1, family=gaussian)
 Anova(modelS, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 35.241 10  0.0001136
+# χ       DF    p
+# 32.743  10    0.0003008
 emmeans(modelS,"Round")
 #
 #
 # Sf
 modelSf <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Sf",], ziformula=~1, family=gaussian)
 Anova(modelSf, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 81.666 10  2.366e-13
+# χ       DF    p
+# 89188   10    7.76e-15
 emmeans(modelSf,"Round")
 #
 #
 # Sli
 modelSli <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Sli",], ziformula=~1, family=gaussian)
 Anova(modelSli, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ     DF    p
-# 161.95 10  < 2.2e-16
+# χ       DF    p
+# 154.95  10  < 2.2e-16
 emmeans(modelSli,"Round")
 #
 #
