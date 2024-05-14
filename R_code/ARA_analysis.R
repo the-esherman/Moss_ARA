@@ -413,7 +413,7 @@ field_environ.plot <- field_environ.plot %>%
                            Round == "8" ~ "Jul",
                            Round == "9" ~ "Aug",
                            Round == "10" ~ "Sep",
-                           Round == "11" ~ "Nov",))
+                           Round == "11" ~ "Nov"))
 #
 # For text
 # Environmental factors
@@ -862,6 +862,38 @@ z.P %>% count(Round)
 
 z.N %>% count(Species)
 z.P %>% count(Species)
+
+
+
+# Check if any moss colony never does N2-fixation
+emptyBryophyte <- field_ARA_wide.5 %>%
+  select(Block, Species, Round, Et_prod_umol_h_m2) %>%
+  group_by(Block, Species) %>%
+  summarise(Et_prod = sum(Et_prod_umol_h_m2)) %>%
+  ungroup()
+#
+# All have at least some ethylene production at some point
+#
+# Which seasons
+emptyBryophyte_when <- field_ARA_wide.5 %>%
+  select(Block, Species, Round, Et_prod_umol_h_m2) %>%
+  mutate(season = case_when(Round == "1" | Round == "2" | Round == "3" ~ "Fall1",
+                            Round == "4" ~ "Winter",
+                            Round == "5" | Round == "6" ~ "Spring",
+                            Round == "7" | Round == "8" | Round == "9" ~ "Summer",
+                            Round == "10" | Round == "11" ~ "Fall2")) %>%
+  group_by(Block, Species, season) %>%
+  summarise(Et_prod = sum(Et_prod_umol_h_m2)) %>%
+  ungroup()
+#
+# Colonies where nothing happens after the first autumn
+x <- emptyBryophyte_when %>%
+  pivot_wider(names_from = season, values_from = Et_prod) %>%
+  mutate(late = Fall2 + Winter + Spring + Summer) %>%
+  filter(late == 0)
+#
+# A few colonies (8) only show any production during the first autumn
+
 
 #
 #
