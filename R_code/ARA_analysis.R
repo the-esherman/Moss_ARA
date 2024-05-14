@@ -348,8 +348,7 @@ field_environ.3 <- field_ARA_wide.5 %>%
          Soil_temperature = Soil_temperature + 273) %>% # remove negative temperature by converting to kelvin
   select(-AirT_C) %>%
   mutate(Round = as.factor(Round)) %>%
-  pivot_wider(values_from = Et_prod_umol_h_m2, names_from = Species) %>%
-  filter(Round != "1") 
+  pivot_wider(values_from = Et_prod_umol_h_m2, names_from = Species)
 
 # Find from station!!!
 # Or from WinterEcology I -> last measurements were in beginning of October
@@ -437,7 +436,8 @@ field_environ.scores.sp <- field_environ.scores.sp %>%
 #
 # Plot the NMDS
 ggplot() +
-#  geom_polygon(data=field_environ.plot,aes(x=NMDS1,y=NMDS2,fill=snowS,group=snowS),alpha=0.30) +
+#  geom_polygon(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, fill = snowS, group = snowS), alpha = 0.30) +
+#  geom_polygon(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, fill = season, group = season), alpha = 0.30) +
   geom_text(data = field_environ.scores.env, aes(x = NMDS1, y = NMDS2, label = Factors)) +
   geom_point(data = field_environ.plot, aes(x = NMDS1, y = NMDS2, shape = Block, color = month), size = 3) +
   geom_segment(data = field_environ.scores.sp, aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2), arrow = arrow(length = unit(0.25, "cm")), color = "#8fa3a5") +
@@ -445,7 +445,7 @@ ggplot() +
   coord_equal() +
   theme_classic() +
   theme(legend.text = element_text(size = 21), legend.title = element_text(size = 21))
-#
+
 #
 #
 #-------  »   Q1            « -------
@@ -511,7 +511,7 @@ Q1_ARA %>%
 #  ggplot(aes(x = log(Et_prod_umol_h_m2+1))) + geom_histogram()
 #
 #
-# Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMP package was used
+# Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMB package was used
 # Production is square-root transformed
 model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
@@ -610,6 +610,80 @@ emmeans(modelSli,"Round")
 #-------  »   Q2            « -------
 # 2.	How do the different bryophyte functional groups differ their N2-fixation potential through the year of the Arctic?
 #
+
+#
+#
+#
+#-------  »   Vial          « -------
+#
+# As with the field data, but done for the three rounds
+# For the vial data, the rounds denoted with 5 are in climate chambers at 5 ºC
+Qvial_ARA <- vial_ARA.3 %>%
+  mutate(across(Round, ~as.character(.x))) %>%
+  mutate(across(c(Block, Species, Round), ~as.factor(.x)))
+#
+# Transform data
+Qvial_ARA <- Qvial_ARA %>%
+  select(1:2,  4, Et_prod_umol_h_m2) %>%
+  mutate(logEt_prod = log(Et_prod_umol_h_m2+2),
+         sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
+         cubeEt_prod = Et_prod_umol_h_m2^(1/9),
+         sqEt_prod = Et_prod_umol_h_m2^2,
+         ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
+         arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))))
+
+Qvial_ARA.1 <- Qvial_ARA %>%
+  filter(Round == "A" | Round == "B" | Round == "C")
+
+Qvial_ARA.2 <- Qvial_ARA %>%
+  filter(Round == "A5" | Round == "B5" | Round == "C5")
+
+
+#
+# Linear mixed effects model with both species and round
+lmeVial <- lme(logEt_prod ~ Round*Species,
+            random = ~1|Block/Species,
+            data = Qvial_ARA, na.action = na.exclude, method = "REML")
+#
+# Using lme4 package:
+# lmer(logEt_prod ~ Round*Species + (1 | Block/Species), data = Q1_ARA, na.action = na.exclude)
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeVial), resid(lmeVial), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeVial), main = "Normally distributed?")                 
+qqline(resid(lmeVial), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeVial)
+par(mfrow = c(1,1))
+# Values are not very good because of several zero values.
+#
+# model output
+Anova(lmeVial, type=2)
+
+
+
+Qvial_ARA.1 %>%
+#  ggplot(aes(x = Round, y = (Et_prod_umol_h_m2))) + geom_point()
+  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram()
+
+Qvial_ARA.2 %>%
+  ggplot(aes(x = Round, y = (Et_prod_umol_h_m2))) + geom_point()
+#  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram()
+
+
+# Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMB package was used
+# Production is square-root transformed
+model_vial <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Qvial_ARA.1, ziformula=~1, family=gaussian)
+Anova(model_vial, type = c("II"), test.statistic = c("Chi"), component = "cond")
+emmeans(model_vial, ~ Species*Round)
+
+
+model_vial2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Qvial_ARA.2, ziformula=~1, family=gaussian)
+Anova(model_vial2, type = c("II"), test.statistic = c("Chi"), component = "cond")
+emmeans(model_vial2, ~ Species*Round)
+
+
 
 #
 #
