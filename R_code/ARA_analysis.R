@@ -893,7 +893,16 @@ x <- emptyBryophyte_when %>%
   filter(late == 0)
 #
 # A few colonies (8) only show any production during the first autumn
-
+# Remove
+field_ARA_wide.5 %>%
+  filter(Block != "B" | Species != "Au") %>%
+  filter(Block != "P" | Species != "Pti") %>%
+  filter(Block != "P" | Species != "Sf") %>%
+  filter(Block != "P" | Species != "Hy") %>%
+  filter(Block != "R" | Species != "Pti") %>%
+  filter(Block != "R" | Species != "Sf") %>%
+  filter(Block != "W" | Species != "Po") %>%
+  filter(Block != "Y" | Species != "Di")
 
 #
 #
