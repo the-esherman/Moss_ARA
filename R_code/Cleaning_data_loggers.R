@@ -423,6 +423,45 @@ Wetland <- tibble(seq(from = ymd_hms('2020-08-28 17:00:00'), to = ymd_hms('2022-
   rename("Date_time" = "seq(...)")
 
 Wetland <- reduce(list(Wetland, Wetland1, Wetland2, Wetland3), left_join, by = "Date_time")
+#
+#
+# PAR values are missing (no sensor) from before the 23rd of September (2020-09-23). Replace with values measured from another site in Abisko
+#
+# Get PAR data from WinterEcology I project in Abisko for September values, prior to first logging
+# Cleaning code modified from other project. See below link for full code
+# https://github.com/the-esherman/Project_I_15N_seasonality
+Abisko_EM50 <- read_xlsx("Data_raw/Loggers/allEMdata Abisko.xlsx", col_names = TRUE, col_types = c("date", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+# Remove last lines without a date and extra header part. Set NaN to NA
+Abisko_EM50.1 <- Abisko_EM50 %>%
+  slice(5:n()) %>%
+  dplyr::select(-c(NA...9, NA...18, NA...27, NA...36, NA...45)) %>%
+  dplyr::filter(!(is.na(Date))) %>%
+  mutate(across(where(is.character), ~na_if(.,"NaN")),
+         across(where(is.numeric), ~na_if(.,NaN))) %>%
+  mutate(across(c(Date, A1_Date, A2_Date, A3_Date, A4_Date, A5_Date), ymd_hms)) %>%
+  filter(Date <= ymd_hms('2020-09-23 15:00:00') & Date >= ymd_hms('2020-08-28 17:00:00')) %>%
+  # Select PAR
+  select(Date, A1_PAR, A2_PAR, A3_PAR, A4_PAR, A5_PAR) %>%
+  group_by(Date) %>%
+  mutate(AbiskoPAR = mean(c(A1_PAR, A2_PAR, A3_PAR, A4_PAR, A5_PAR), na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(Date, AbiskoPAR) %>%
+  rename("Date_time" = Date)
+#
+# Replace first PAR values
+# Heath
+Heath <- Heath %>%
+  left_join(Abisko_EM50.1, by = join_by(Date_time)) %>%
+  mutate(PAR = if_else(Date_time <= ymd_hms('2020-09-23 15:00:00') & Date_time >= ymd_hms('2020-08-28 17:00:00'), AbiskoPAR, PAR)) %>%
+  select(!"AbiskoPAR")
+#
+# Wetland
+Wetland <- Wetland %>%
+  left_join(Abisko_EM50.1, by = join_by(Date_time)) %>%
+  mutate(PAR = if_else(Date_time <= ymd_hms('2020-09-23 15:00:00') & Date_time >= ymd_hms('2020-08-28 17:00:00'), AbiskoPAR, PAR)) %>%
+  select(!"AbiskoPAR")
+
+
 
 
 #
