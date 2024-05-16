@@ -431,6 +431,28 @@ Wetland <- reduce(list(Wetland, Wetland1, Wetland2, Wetland3), left_join, by = "
 # Cleaning code modified from other project. See below link for full code
 # https://github.com/the-esherman/Project_I_15N_seasonality
 Abisko_EM50 <- read_xlsx("Data_raw/Loggers/allEMdata Abisko.xlsx", col_names = TRUE, col_types = c("date", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+#
+# Check values
+xx <- Abisko_EM50 %>%
+  slice(5:n()) %>%
+  dplyr::select(-c(NA...9, NA...18, NA...27, NA...36, NA...45)) %>%
+  dplyr::filter(!(is.na(Date))) %>%
+  mutate(across(where(is.character), ~na_if(.,"NaN")),
+         across(where(is.numeric), ~na_if(.,NaN))) %>%
+  mutate(across(c(Date, A1_Date, A2_Date, A3_Date, A4_Date, A5_Date), ymd_hms)) %>%
+  # Select PAR
+  select(Date, A1_PAR, A2_PAR, A3_PAR, A4_PAR, A5_PAR) %>%
+  rename("Date_time" = Date)
+#
+# Plot for each sensor
+plot_ly(xx, x = ~A1_PAR, y = ~Date_time, name = "A1", type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>% 
+  add_trace(x = ~A2_PAR, y = ~Date_time, name = "A2",type = 'scatter', mode = "markers", marker = list(color = "#CC79A7")) %>%
+  add_trace(x = ~A3_PAR, y = ~Date_time, name = "A3",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~A4_PAR, y = ~Date_time, name = "A4",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
+  add_trace(x = ~A5_PAR, y = ~Date_time, name = "A5",type = 'scatter', mode = "markers", marker = list(color = "#F0E442")) %>%
+  layout(title = "Abisko PAR", xaxis = list(title = "PAR"), margin = list(l = 100))
+# Sensor A3 is having problems, but only until around May 2020. Not relevant for data needed.
+#
 # Remove last lines without a date and extra header part. Set NaN to NA
 Abisko_EM50.1 <- Abisko_EM50 %>%
   slice(5:n()) %>%
