@@ -568,16 +568,21 @@ plot_ly(Heath_moist.2, x = ~Soil_moisture_Au, y = ~Date_time, name = "Aulacomniu
   layout(title = "Soil moisture per species", xaxis = list(title = "Soil moisture (%vol)"), margin = list(l = 100))
 #
 # PAR combine heath and wetland
-pp <- left_join(Heath, Wetland, by = join_by("Date_time")) %>%
+plot_par <- left_join(Heath, Wetland, by = join_by("Date_time")) %>%
   select(Date_time, PAR.x, PAR.y) %>%
   rename("PAR_heath" = PAR.x,
          "PAR_wetland" = PAR.y)
 #
 # Plot PAR
-plot_ly(pp, y = ~PAR_heath, x = ~Date_time, name = "Heath", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+plot_ly(plot_par, y = ~PAR_heath, x = ~Date_time, name = "Heath", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   add_trace(y ~PAR_wetland, x = ~Date_time, name = "Wetland",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
   layout(title = "Bryophyte PAR", xaxis = list(title = "PAR"), margin = list(l = 100))
-
+#
+# PAR difference between loggers
+plot_par %>%
+  mutate(PAR_diff = PAR_heath - PAR_wetland) %>%
+  ggplot(aes(x = Date_time, y = PAR_diff)) +
+  geom_point()
 
 
 
