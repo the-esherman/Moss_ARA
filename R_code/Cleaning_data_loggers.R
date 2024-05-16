@@ -566,7 +566,17 @@ plot_ly(Heath_moist.2, x = ~Soil_moisture_Au, y = ~Date_time, name = "Aulacomniu
   add_trace(x = ~Soil_moisture_Ra, y = ~Date_time, name = "Racomitrium lanuginosum",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
   add_trace(x = ~Soil_moisture_G, y = ~Date_time, name = "Green",type = 'scatter', mode = "markers", marker = list(color ="black")) %>%
   layout(title = "Soil moisture per species", xaxis = list(title = "Soil moisture (%vol)"), margin = list(l = 100))
-
+#
+# PAR combine heath and wetland
+pp <- left_join(Heath, Wetland, by = join_by("Date_time")) %>%
+  select(Date_time, PAR.x, PAR.y) %>%
+  rename("PAR_heath" = PAR.x,
+         "PAR_wetland" = PAR.y)
+#
+# Plot PAR
+plot_ly(pp, y = ~PAR_heath, x = ~Date_time, name = "Heath", type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(y ~PAR_wetland, x = ~Date_time, name = "Wetland",type = 'scatter', mode = "markers", marker = list(color = "#0072B2")) %>%
+  layout(title = "Bryophyte PAR", xaxis = list(title = "PAR"), margin = list(l = 100))
 
 
 
