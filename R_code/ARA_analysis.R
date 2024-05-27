@@ -327,7 +327,66 @@ vial_ARA.2 <- vial_ARA.1 %>%
 vial_ARA.3 <- vial_ARA.2 %>%
   mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
 #
+# Field samples
+vial_ARA_field <- vial_ARA.3 %>%
+  filter(Round == "A" | Round == "B" | Round == "C")
+#
+# Add climate data: Air temperature (not exactly what is found) and PAR
+#
+# Select the period, to match interval for environmental data
+vial_ARA_field.period <- vial_ARA_field %>%
+  mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
+  mutate(Tid = round_date(ymd_hms(Date_time), unit = "hour")) %>%
+  mutate(Tid = hms::as_hms(Tid)) %>%
+  # Set the times
+  group_by(Round, Date) %>%
+  mutate(Start = floor_date(min(Date_time), unit = "hour"),
+         End = ceiling_date(max(Date_time), unit = "hour")) %>%
+  ungroup() %>%
+  mutate(across(c(Start, End), hms::as_hms)) %>%
+  relocate(c(Start, End), .after = Timestamp) %>%
+  # Remove temporary variables
+  select(!c("Date_time", "Tid")) %>%
+  select(Round, Date, Start, End) %>%
+  distinct(Round, Date, Start, End, .keep_all = TRUE)
+#
+# Average environmental data for the timeperiod
+field_environ_vial <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
+  left_join(field_ARA.period, by = join_by(Date)) %>%
+  filter(!is.na(Round)) %>%
+  group_by(Date) %>%
+  filter(Tid >= Start & Tid <= End) %>%
+  summarise(Soil_moisture = mean(Soil_moisture),
+            Soil_temperature = mean(Soil_temperature),
+            PAR = mean(PAR),
+            AirT_C = mean(AirT_C)) %>%
+  ungroup()
+
+
+
+vial_ARA_field <- vial_ARA_field %>%
+  left_join(field_environ.2, by = join_by(Block, Species, Round))
+
+
+
+# Climate chambers
+vial_ARA_climateChamber <- vial_ARA.3 %>%
+  filter(Round == "A5" | Round == "B5" | Round == "C5")
+
+
+
+
+
+
 vial_ARA.3 %>%
+  ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
+
+
+
+vial_ARA_field %>%
+  ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species)
+
+vial_ARA_climateChamber %>%
   ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species)
 
 
