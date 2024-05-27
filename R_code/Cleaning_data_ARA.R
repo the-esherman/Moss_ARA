@@ -59,11 +59,25 @@ ARA_26a <- read_xlsx("Data_raw/EtylAcet/Anders M 26a - Etylen & Acetylen.xlsx", 
 ARA_26b <- read_xlsx("Data_raw/EtylAcet/Anders M 26b - Etylen & Acetylen.xlsx", sheet = 1, cell_cols(1:13), col_names = c("Comments", "Area_ethyl", "Area_acet", "Sample_order", "ID_nr", "Sample_ID", "Block", "Species", "Time_nr", "Tray_ID", "ID_nr2", "Ethyl_conc_ppm", "Acet_conc_prC"))
 ARA_26c <- read_xlsx("Data_raw/EtylAcet/Anders M 26c - Etylen & Acetylen.xlsx", sheet = 1, cell_cols(1:13), col_names = c("Comments", "Area_ethyl", "Area_acet", "Sample_order", "ID_nr", "Sample_ID", "Block", "Species", "Time_nr", "Tray_ID", "ID_nr2", "Ethyl_conc_ppm", "Acet_conc_prC"))
 #
+# Import 15N raw data
+moss15N <- read_xlsx("Data_raw/EmilmosFINAL.xlsx", 
+          sheet = "Isotope Results", 
+          col_names = c("Lab_ID", "Kolumn1", "Plate", "Well", "Sample", "Sample_weight_mg", "c1", "c2", "Sample_number", "Name", 
+                        "Height_N_nA", "N15", "Height_C_nA", "C13", "Weight", "PEAnA_N", "PEA15N", "PEAnA_C", "PEA13C", "gnsnSTD_N_weight", 
+                        "gnsnSTD_C_weight", "1nA_to_mgN_STD", "1nA_to_mgC", "Sample_N_mg", "Sample_C_mg", "N%", "C%", "C_N_ratio", "d15N_korr", "d13C_korr", 
+                        "AP_NatAbu_15N", "AP_15N", "APE_N", "N_pr_DW", "15N_pr_DW", "15N_pr_N"), 
+          skip = 2, 
+          col_types = c("text", "text", "text", "text", "text", "numeric", "text", "text", "text", "text",
+                        "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", 
+                        "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+                        "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+#
 #
 #
 #=======  🧹   Cleaning     🧹 =======
 #
 # Format base data with timestamps correctly
+# Field chamber data
 ID_field.2 <- ID_field %>%
   mutate(Time = case_when(Round == "9x" & Time == "T1" ~ "T1x",
                           Time_nr == "T0x_2" ~ "T0x",
@@ -72,9 +86,15 @@ ID_field.2 <- ID_field %>%
   mutate(across(Date, ~ymd(.x))) %>%
   select(!c(Comments, Sample_ID))
 #
+# Vial data
 ID_vial.2 <- ID_vial %>%
   mutate(across(Date, ~ymd(.x))) %>%
   select(!c(Comments, Sample_ID))
+#
+# 15N data
+ID_15N.2 <- ID_15N %>%
+  mutate(across(Date, ~ymd(.x))) %>%
+  select(!Sample_ID)
 #
 #
 # Combine all raw datasheets
@@ -169,6 +189,46 @@ field_ARA <- field_ARA %>%
                                      Block != "Y" & Species == "Pti" & Round == "5" & Time == "T0")]),
                                    TRUE ~ Acet_conc_prC))
 #
+# 15N data ----
+# Removed unused columns and rows
+moss15N.2 <- moss15N %>%
+  filter(!is.na(Lab_ID)) %>%
+  select(Plate, Well, Sample, Sample_weight_mg, 26:30, AP_15N, 34:36) # If only final results: 26:30, AP_15N, 34:36 # If recalculating: 11:36, using 11:21
+#
+# Split to get Natural abundance
+moss15N_NatAb <- moss15N.2 %>%
+  filter(Plate == "20") %>%
+  select(!c(Plate, Well)) %>%
+  rename("AP_NatAbu_15N" = "AP_15N") %>%
+  separate_wider_delim(Sample, delim = "_", names = c("Block", "Species", "Round"), too_few = "debug", too_many = "debug") %>%
+  select(!c(Round, Sample_ok, Sample_pieces, Sample_remainder)) %>%
+  mutate(Species = case_when(Species == "An" ~ "Au",
+                             Species == "s" ~ "S",
+                             Species == "Pi" ~ "Di",
+                             TRUE ~ Species))
+#
+moss15N_enrich <- moss15N.2 %>%
+  filter(Plate == "21") %>%
+  select(!c(Plate, Well)) %>%
+  separate_wider_delim(Sample, delim = "_", names = c("Block", "Species", "Round"), too_few = "debug", too_many = "debug") %>%
+  select(!c(Round, Sample_ok, Sample_pieces, Sample_remainder)) %>%
+  mutate(Species = case_when(Species == "St" ~ "Sf",
+                             Species == "s" ~ "S",
+                             Species == "Pfi" ~ "Pti",
+                             TRUE ~ Species))
+#
+# Average natural abundance per species
+moss15N_NatAb.avg <- moss15N_NatAb %>%
+  summarise(AP_NatAbu_15N = mean(AP_NatAbu_15N, na.rm = TRUE), .by = Species)
+#
+# Add natural abundance
+moss15N.3 <- moss15N_enrich %>%
+  left_join(moss15N_NatAb.avg, by = join_by(Species)) %>%
+  mutate(APE_15N = AP_15N - AP_NatAbu_15N) %>%
+  select(!c(Sample, Sample_weight_mg))
+
+
+#
 #
 #------- • Export clean data -------
 # CAREFUL!
@@ -178,6 +238,9 @@ field_ARA <- field_ARA %>%
 # Save Field and vial data separately
 write_csv(vials_ARA, "Data_clean/vial_ARA.csv", na = "NA")
 write_csv(field_ARA, "Data_clean/field_ARA.csv", na = "NA")
+#
+# Save 15N data
+write_csv(moss15N.3, "Data_clean/vial_15N.csv", na = "NA")
 
 
 
