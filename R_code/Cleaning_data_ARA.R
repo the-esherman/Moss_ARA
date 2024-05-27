@@ -12,9 +12,11 @@ library(lubridate)
 #
 #=======  ♠   Load data     ♠ =======
 # Import ID's
+# Notice that the "character" timestamp only works if they are "text" fields in excel. Be prepared for some fun!
 ID_info <- read_xlsx("Data_raw/Data_ID.xlsx")
 ID_field <- read_xlsx("Data_raw/ID_base_field.xlsx", col_types = c("text", "text", "text", "text", "text", "text", "text", "numeric", "text", "numeric", "text", "text"))
 ID_vial <- read_xlsx("Data_raw/ID_base_vial.xlsx", col_types = c("text", "text", "text", "text", "text", "text", "text", "numeric", "text", "text", "text"))
+ID_15N <- read_xlsx("Data_raw/ID_15N.xlsx", col_types = c("text", "text", "text", "text", "numeric", "text", "text", "text"))
 #
 # Import ARA raw files
 # Load each of 32 raw files
@@ -78,6 +80,9 @@ ID_vial.2 <- ID_vial %>%
 # Combine all raw datasheets
 comb_ARA <- bind_rows(list(ARA_18a, ARA_18b, ARA_18c, ARA_18d, ARA_18e, ARA_18f, ARA_19a, ARA_19b, ARA_19c, ARA_19d, ARA_20a, ARA_20b, ARA_20c, ARA_20d, ARA_21a, ARA_21b, ARA_22a, ARA_22b, ARA_22c, ARA_23a, ARA_23b, ARA_23c, ARA_23d, ARA_24a, ARA_24b, ARA_24c, ARA_25a, ARA_25b, ARA_25c, ARA_26a, ARA_26b, ARA_26c), .id = "Raw") %>%
   select(!c(Sample_order, ID_nr2)) # Ignore ID_nr2, as this is a duplicate from 25a-c
+#
+# remove loaded files
+rm(ARA_18a, ARA_18b, ARA_18c, ARA_18d, ARA_18e, ARA_18f, ARA_19a, ARA_19b, ARA_19c, ARA_19d, ARA_20a, ARA_20b, ARA_20c, ARA_20d, ARA_21a, ARA_21b, ARA_22a, ARA_22b, ARA_22c, ARA_23a, ARA_23b, ARA_23c, ARA_23d, ARA_24a, ARA_24b, ARA_24c, ARA_25a, ARA_25b, ARA_25c, ARA_26a, ARA_26b, ARA_26c)
 #
 # Remove the original header, and rows of standards and blanks 
 comb_ARA.2 <- comb_ARA %>%
@@ -196,193 +201,4 @@ field_ARA_unique.2 <- field_ARA %>%
   filter(!grepl("Ch", Block)) %>% # Remove chamber control measurements
   distinct(Block, Round, Date)
 
-
-
-
-
-# #### Remove? or move? ####
-
-
-
-
-# Cleaning data a bit
-# 
-clean_ARA_full <- ARA_full2 %>%
-  # Correct all day stamps to match when they were actually taken
-  mutate(Date = case_when(Round == 11 & (Block == "B" | Block == "Y" | Block == "W") ~ 20211108,
-                          Round == 11 & (Block == "R" | Block == "P") ~ 20211109,
-                          Round == 10 & (Block == "R" | Block == "P" | Block == "W" | Block == "Y") ~ 20210929,
-                          Round == 10 & Block == "B" ~ 20210930,
-                          Round == 9 & Block == "B" ~ 20210829,
-                          Round == 9 & (Block == "W" | Block == "P" | Block == "R" | Block == "Y") ~ 20210830,
-                          Round == 8 & (Block == "W" | Block == "P") ~ 20210705,
-                          Round == 8 & (Block == "R" | Block == "Y" | Block == "B") ~ 20210706,
-                          Round == 7 & (Block == "Y" | Block == "R") ~ 20210604,
-                          Round == 7 & (Block == "B" | Block == "P" | Block == "W") ~ 20210605,
-                          Round == 6 & (Block == "B" | Block == "Y" | Block == "W") ~ 20210507,
-                          Round == 6 & (Block == "R" | Block == "P") ~ 20210510,
-                          Round == 5 & (Block == "B" | Block == "Y" | Block == "W") ~ 20210329,
-                          Round == 5 & (Block == "R" | Block == "P") ~ 20210330,
-                          Round == 4 & (Block == "P" | Block == "R") ~ 20210202,
-                          Round == 4 & (Block == "Y" | Block == "B" | Block == "W") ~ 20210201,
-                          Round == 3 & (Block == "Y") ~ 20201111,
-                          Round == 3 & (Block == "R") ~ 20201113,
-                          Round == 3 & (Block == "B") ~ 20201114,
-                          Round == 3 & (Block == "P") ~ 20201115,
-                          Round == 3 & (Block == "W") ~ 20201116,
-                          Round == 2 & (Block == "R") ~ 20201001,
-                          Round == 2 & (Block == "W") ~ 20201002,
-                          Round == 2 & (Block == "Y" | Block == "B" | Block == "P") ~ 20201003,
-                          Round == 1 & (Block == "W") ~ 20200910,
-                          Round == 1 & (Block == "P" | Block == "R" | Block == "Y") ~ 20200911,
-                          Round == 1 & (Block == "B") ~ 20200912)
-  ) %>%
-  mutate(across(c("Acetylene conc (%)",	"Ethylene conc (ppm)"), as.numeric)) %>%
-  # Remove Tray ID column
-  select(-Bakke_ID) %>%
-  # Remove rows with extra sampling, where rows are NA
-  filter(!is.na(Round)) %>%
-  # Remove samples without a date
-  filter(!is.na(Date)) %>%
-  # Remove duplicate T0 at row
-  slice(-316) # P_Sli_T0 number two at time 14:33:00
-  #filter(-(Sample_ID == "P_Sli_2" & Time == "T0" & Timestamp == "14:33:00")) # Does not work
-  #distinct(Sample_ID,Time) # Only keeps those two columns
-#
-#
-# Have columns for each time, and add minutes passed
-#
-ARA_full_wide <- clean_ARA_full %>%
-  filter((Time == "T0" | Time == "T1" | Time == "T2")) %>%
-  #mutate(across(c("Timestamp"), hms::as_hms)) %>%
-  pivot_wider(names_from = c("Time"), values_from = c("Timestamp",	"Acetylene conc (%)",	"Ethylene conc (ppm)")) %>%
-  mutate("T0" = period_to_seconds(hms(Timestamp_T0)), .after = Timestamp_T0) %>%
-  mutate("T1" = period_to_seconds(hms(Timestamp_T1)), .after = Timestamp_T1) %>%
-  mutate("T2" = period_to_seconds(hms(Timestamp_T2)), .after = Timestamp_T2) %>%
-  mutate("Time_0-1_min" = (T1-T0)/60, .before = "Acetylene conc (%)_T0") %>%
-  mutate("Time_0-2_min" = (T2-T0)/60, .before = "Acetylene conc (%)_T0") %>%
-  mutate("Time_1-2_min" = (T2-T1)/60, .before = "Acetylene conc (%)_T0") %>%
-  select(-c(T0,T1,T2))
-#
-#
-# Gas constant
-Gas_const = 8.31446261815324 # L kPa K^-1 umol^-1
-# 
-# Calculate ethylene production
-ARA_full_pro <- ARA_full_wide %>%
-  #
-  # Area and vol of chamber
-  mutate("Ch_area_m2" = (`Chamber radius (cm)`^2 * pi)/10000, .before = Date) %>%
-  mutate("Ch_vol_L" = (`Chamber radius (cm)`^2 * pi * `Chamber height (cm)`)/1000, .before = Date) %>%
-  #
-  # 60 min time and Acetylene and Ethylene
-  mutate("T_60min" = if_else(ARA_full_wide$`Time_0-1_min` >= 55 & ARA_full_wide$`Time_0-1_min` <= 65, ARA_full_wide$`Time_0-1_min`, ARA_full_wide$`Time_0-2_min`), .after = "Time_1-2_min") %>%
-  mutate("Ace_%_60min" = if_else(ARA_full_wide$`Time_0-1_min` >= 55 & ARA_full_wide$`Time_0-1_min` <= 65, ARA_full_wide$`Acetylene conc (%)_T1`, ARA_full_wide$`Acetylene conc (%)_T2`)) %>%
-  mutate("Eth_ppm_60min" = if_else(ARA_full_wide$`Time_0-1_min` >= 55 & ARA_full_wide$`Time_0-1_min` <= 65, ARA_full_wide$`Ethylene conc (ppm)_T1`, ARA_full_wide$`Ethylene conc (ppm)_T2`)) %>%
-  #
-  # Calculate Ethylene concentration per hour from T1
-  mutate("ppm_Et_h-1" = (`Ethylene conc (ppm)_T1` - `Ethylene conc (ppm)_T0`)/(`Time_0-1_min`/60)) %>%
-  #
-  # Calculate lost Acetylene from T0 to T1
-  mutate("Lost_Ac_h-1" = ((`Acetylene conc (%)_T1`*10000 - `Acetylene conc (%)_T0`*10000) / (`Time_0-1_min`/60))) %>%
-  #
-  # Correct Ethylene production based on Acetylene loss
-  mutate("Corr_Et_h-1" = (`ppm_Et_h-1` - (`Lost_Ac_h-1`*`Ethylene conc (ppm)_T0`/(`Acetylene conc (%)_T0`*10000)))) %>%
-  #
-  # Ethylene production
-  mutate("umol_Et_pro" = `ppm_Et_h-1` * (Ch_vol_L * 101.3) / (Gas_const*273)/Ch_area_m2) %>%
-  # Formula:    Et h^-1 = n*(V*p) / (R*T)/A
-  # Units: µmol Et h^-1 = ppm Et h^-1 *(L * kPa) / (8.314 * K) / m^2
-  #
-  # Corrected Ethylene production
-  mutate("Corr_umol_Et_pro" = `Corr_Et_h-1` * (Ch_vol_L * 101.3) / (Gas_const*273)/Ch_area_m2)
-#
-# Set negative values
-ARA_full_pro <- ARA_full_pro %>%
-  # Define Ethylene production as definite to work with
-  #
-  # Ethylene production with negative values from corrected Ethylene production
-  mutate("Et_pro" = Corr_umol_Et_pro) %>%
-  #
-  # Replace negative values with 0
-  mutate("Et_0_pro" = if_else(ARA_full_pro$Corr_umol_Et_pro >= 0, ARA_full_pro$Corr_umol_Et_pro, 0)) %>%
-  #
-  # Remove negative values (replace with 0 then remove 0's)
-  mutate("Et_pos_pro" = Et_0_pro) %>%
-  mutate("Et_pos_pro" = replace(Et_pos_pro, which(Et_pos_pro == 0), NA))
-#
-ggplot(ARA_full_pro, aes(Round, Et_0_pro)) + stat_summary(fun = mean, geom="col") + stat_summary(fun.data = mean_cl_boot, geom = "errorbar", width = 0.2) + labs(x = "Time", y = "Ethylene production per hour (umol per h per m^2)", colour = "Species", title = "Ethylene production") + facet_wrap(~Species) + coord_cartesian(ylim=c(0,5)) + guides(x = guide_axis(n.dodge = 2)) + theme_light()
-
-
-# Works, but showed that duplicate problem is with Tray ID which is not same for same sample series all the time
-ARA_full_wide <- ARA_full2 %>%
-  filter((Time == "T0" | Time == "T1" | Time == "T2")) %>%
-  select(-Bakke_ID) %>%
-  mutate(across(c("Timestamp"), hms::as_hms)) %>%
-  group_by(Time) %>%
-  mutate(row = row_number()) %>%
-  pivot_wider(names_from = c("Time"), values_from = c("Timestamp",	"Acetylene conc (%)",	"Ethylene conc (ppm)")) %>%
-  select(-row)
-
-write_csv2(ARA_full_wide, "Data_raw/moss_ARA_all_check.csv")
-  
-#
-
-# #### To be removed ####
-
-# Import ethylene/acetylen data from many different excel files and combine
-# Import
-ARA1 <- read_xlsx("Data_raw/EtylAcet/Anders M 18a (531 prøver) - Etylen & Acetylen.xlsx", sheet = 1,)#, skip = 3)#, cols_only(2:11), col_names = c("Area Acetylen", "Sample order","ID_nr", "Sample_ID", "Block", "Species", "Time_nr", "Tray_ID", "Etylen conc (ppm)", "Acetylen conc (%)"))
-
-
-ARA1 <- read_xlsx("Data_raw/EtylAcet/Anders M 18a (531 prøver) - Etylen & Acetylen.xlsx", sheet = 1, skip = 3, cols_only(1:11), col_names = c("Comments","Area Ethylen", "Area Acetylen", "Sample order","ID_nr", "Sample_ID", "Block", "Species", "Time_nr", "Tray_ID", "Etylen conc (ppm)", "Acetylen conc (%)"))
-
-ARA_full <- read_xlsx("Data_raw/moss_ARA_all.xlsx", col_types = c("text","text","text","text","text","text","numeric","numeric","text","numeric", "numeric", "numeric"))
-ARA_full2 <- read_csv2("Data_raw/moss_ARA_all.csv")#, col_types = c("text","text","text","text","text","text","numeric","numeric","text","text", "numeric", "numeric"))
-
-
-
-#
-# Alternative combination
-comb_ARA <- ARA_18a %>%
-  bind_rows(ARA_18c) %>%
-  bind_rows(ARA_18d) %>%
-  bind_rows(ARA_18e) %>%
-  bind_rows(ARA_18f) %>%
-  bind_rows(ARA_19a) %>%
-  bind_rows(ARA_19b) %>%
-  bind_rows(ARA_19c) %>%
-  bind_rows(ARA_19d) %>%
-  bind_rows(ARA_20a) %>%
-  bind_rows(ARA_20b) %>%
-  bind_rows(ARA_20c) %>%
-  bind_rows(ARA_20d) %>%
-  bind_rows(ARA_21a) %>%
-  bind_rows(ARA_21b) %>%
-  bind_rows(ARA_22a) %>%
-  bind_rows(ARA_22b) %>%
-  bind_rows(ARA_22c) %>%
-  bind_rows(ARA_23a) %>%
-  bind_rows(ARA_23b) %>%
-  bind_rows(ARA_23c) %>%
-  bind_rows(ARA_23d) %>%
-  bind_rows(ARA_24a) %>%
-  bind_rows(ARA_24b) %>%
-  bind_rows(ARA_24c) %>%
-  bind_rows(ARA_25a) %>%
-  bind_rows(ARA_25b) %>%
-  bind_rows(ARA_25c) %>%
-  bind_rows(ARA_26a) %>%
-  bind_rows(ARA_26b) %>%
-  bind_rows(ARA_26c) %>%
-  select(!c(Sample_order, ID_nr2)) # Ignore ID_nr2, as this is a duplicate from 25a-c
-
-
-
-
-# Correct ID info
-ID_info <- ID_info %>%
-  mutate(Time = case_when(Round == "9x" & Time == "T1" ~ "T1x",
-                          Time_nr == "T0x_2" ~ "T0x",
-                          TRUE ~ Time)) %>%
-  mutate(Round = if_else(Time == "T1x" & Round == "9x", "9", Round))
+#=======  ■  { The End }    ■ =======
