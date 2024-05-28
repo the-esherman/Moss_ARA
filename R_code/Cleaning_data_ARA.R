@@ -64,8 +64,8 @@ moss15N <- read_xlsx("Data_raw/EmilmosFINAL.xlsx",
           sheet = "Isotope Results", 
           col_names = c("Lab_ID", "Kolumn1", "Plate", "Well", "Sample", "Sample_weight_mg", "c1", "c2", "Sample_number", "Name", 
                         "Height_N_nA", "N15", "Height_C_nA", "C13", "Weight", "PEAnA_N", "PEA15N", "PEAnA_C", "PEA13C", "gnsnSTD_N_weight", 
-                        "gnsnSTD_C_weight", "1nA_to_mgN_STD", "1nA_to_mgC", "Sample_N_mg", "Sample_C_mg", "N%", "C%", "C_N_ratio", "d15N_korr", "d13C_korr", 
-                        "AP_NatAbu_15N", "AP_15N", "APE_N", "N_pr_DW", "15N_pr_DW", "15N_pr_N"), 
+                        "gnsnSTD_C_weight", "1nA_to_mgN_STD", "1nA_to_mgC", "Sample_N_mg", "Sample_C_mg", "N_percent", "C_percent", "C_N_ratio", "d15N_korr", "d13C_korr", 
+                        "AP_NatAbu_15N", "AP_15N", "APE_N", "N_pr_DW", "N15_pr_DW", "N15_pr_N"), 
           skip = 2, 
           col_types = c("text", "text", "text", "text", "text", "numeric", "text", "text", "text", "text",
                         "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", 
@@ -193,7 +193,7 @@ field_ARA <- field_ARA %>%
 # Removed unused columns and rows
 moss15N.2 <- moss15N %>%
   filter(!is.na(Lab_ID)) %>%
-  select(Plate, Well, Sample, Sample_weight_mg, 26:30, AP_15N, 34:36) # If only final results: 26:30, AP_15N, 34:36 # If recalculating: 11:36, using 11:21
+  select(Plate, Well, Sample, Sample_weight_mg, 26:30, Sample_N_mg, AP_15N) # If only final results: 26:30, AP_15N # If recalculating: 11:36, using 11:21
 #
 # Split to get Natural abundance
 moss15N_NatAb <- moss15N.2 %>%
@@ -224,8 +224,11 @@ moss15N_NatAb.avg <- moss15N_NatAb %>%
 # Add natural abundance
 moss15N.3 <- moss15N_enrich %>%
   left_join(moss15N_NatAb.avg, by = join_by(Species)) %>%
-  mutate(APE_15N = AP_15N - AP_NatAbu_15N) %>%
-  select(!c(Sample, Sample_weight_mg))
+  mutate(APE_15N = AP_15N - AP_NatAbu_15N,
+         N_pr_DW = ((N_percent/100)*Sample_weight_mg)/Sample_weight_mg*1000) %>%
+  mutate(N15_pr_DW = N_pr_DW*(APE_15N/100)*1000,
+         N15_pr_N = (Sample_N_mg*APE_15N/100)/Sample_N_mg*1000*1000) %>%
+  select(!c(Sample, Sample_weight_mg, Sample_N_mg))
 
 
 #
