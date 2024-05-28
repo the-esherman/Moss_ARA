@@ -22,10 +22,12 @@ library(ggrepel)
 #=======  ♠   Load data     ♠ =======
 # Import ID's
 ID_info <- read_xlsx("Data_raw/Data_ID.xlsx")
+ID_15N <- read_xlsx("Data_raw/ID_15N.xlsx")
 #
 # Import field and vial datasets
 field_ARA <- read_csv("Data_clean/field_ARA.csv", col_names = TRUE)
 vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
+vial_15N <- read_csv("Data_clean/vial_15N.csv", col_names = TRUE)
 #
 # Air temperature
 AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
@@ -100,8 +102,6 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 #
 #
 #=======  ♦   Main data     ♦ =======
-#
-#
 #------- • Environmental -------
 # Air temperature based on wetland measurements. Difference is minimal
 AirT_wetland.1 <- AirT_wetland %>%
@@ -392,6 +392,42 @@ vial_ARA_climateChamber %>%
 
 # ??
 #mutate(across(Timestamp, ~hm(.x)))# %>%
+#
+#
+#------- • 15N data -------
+#
+#
+# 15N data ID
+ID_15N <- ID_15N %>%
+  mutate(across(Date, ~ymd(.x))) %>%
+  select(!c(Sample_ID, Time_nr))
+#
+# Combine 15N data with the ethylene production from the same period.
+# Using field data, since the climate chamber values are mostly 0!
+vial_15N.2 <- vial_ARA.3 %>% 
+  filter(Round == "C") %>%
+  select(Block, Species, Habitat, Et_prod_umol_h_m2) %>%
+  left_join(ID_15N, by = join_by(Block, Species)) %>%
+  relocate(Et_prod_umol_h_m2, .after = Time_T1) %>%
+  left_join(vial_15N, by = join_by(Block, Species)) %>%
+  mutate(Excess_15N = N15_pr_DW*Vial_sample_DW) %>%
+  mutate(Fixed_N = Excess_15N/0.98) %>% # 98% 15N2 used
+  mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N)
+
+vial_15N.avg <- vial_15N.2 %>%
+  group_by(Species) %>%
+  summarise(Et_prod_umol_h_m2 = mean(Et_prod_umol_h_m2, na.rm = TRUE),
+            Fixed_N = mean(Fixed_N, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N)
+  
+
+vial_15N.2 %>%
+  ggplot(aes(x = Fixed_N, y = Et_prod_umol_h_m2)) + geom_point() + facet_wrap(~Species)
+
+vial_15N.2 %>%
+  ggplot(aes(x = Species, y = ARA_ratio)) + geom_boxplot()
+
 #
 #
 #
