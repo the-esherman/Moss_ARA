@@ -1,7 +1,7 @@
-# Cleaning EM50 and TinyTag information
+# Bryophyte experiment - N2-fixation
+# Script author: Emil A.S. Andersen
 #
-# Moss project - N2-fixation
-# By Emil A.S. Andersen
+# Cleaning EM50 and TinyTag information
 #
 #
 #=======  ♣   Libraries     ♣ =======

@@ -1,7 +1,7 @@
+# Bryophyte experiment - N2-fixation
+# Script author: Emil A.S. Andersen
+#
 # Analysis - ARA
-#
-#
-# By Emil A.S. Andersen
 #
 # 
 #=======  ♣   Libraries     ♣ =======

@@ -1,6 +1,7 @@
-# Organize files
+# Bryophyte experiment - N2-fixation
+# Script author: Emil A.S. Andersen
 #
-# By Emil A.S. Andersen
+# Organize files
 #
 #
 #=======  ♣   Libraries     ♣ =======
