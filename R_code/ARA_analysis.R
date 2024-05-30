@@ -29,6 +29,10 @@ field_ARA <- read_csv("Data_clean/field_ARA.csv", col_names = TRUE)
 vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
 vial_15N <- read_csv("Data_clean/vial_15N.csv", col_names = TRUE)
 #
+# Bryophyte density count
+densityCount <- read_xlsx("Data_raw/Moss counts.xlsx")
+densityArea <- (5/2)^2*pi/10000 # Area of one sample for density count in m2
+#
 # Air temperature
 AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
 #
@@ -427,7 +431,20 @@ vial_15N.2 %>%
 
 vial_15N.2 %>%
   ggplot(aes(x = Species, y = ARA_ratio)) + geom_boxplot()
-
+#
+#
+#------- • Density -------
+#
+# Average if there are two counts. Express density per m2
+densityCount <- densityCount %>%
+  rowwise() %>%
+  mutate(density = mean(c(Count, Count2), na.rm = TRUE)) %>%
+  mutate(density = density/(densityArea*Area)) %>%
+  ungroup()
+#
+# Average
+densityCount.2 <- densityCount %>%
+  summarise(density = mean(density, na.rm = TRUE), .by = Species)
 #
 #
 #
