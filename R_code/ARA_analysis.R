@@ -286,7 +286,28 @@ field_ARA_wide.4 <- field_ARA_wide.3 %>%
 #
 # Set negative production to 0
 field_ARA_wide.5 <- field_ARA_wide.4 %>%
-  mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
+  mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2)) %>%
+  # Add Round names, habitat and bryophyte functional groups (BFG)
+  mutate(Month = case_when(Round == 1 ~ "Sept20",
+                         Round == 2 ~ "Oct20",
+                         Round == 3 ~ "Nov20",
+                         Round == 4 ~ "Feb21",
+                         Round == 5 ~ "Mar21",
+                         Round == 6 ~ "May21",
+                         Round == 7 ~ "Jun21",
+                         Round == 8 ~ "Jul21",
+                         Round == 9 ~ "Sept21",
+                         Round == 10 ~ "Oct21",
+                         Round == 11 ~ "Nov21"),
+         Habitat = if_else(Species == "S" | Species == "Sli" | Species == "Sf", "M", "H"),
+         BFG = case_when(Species == "Au" ~ "Short unbranched turf",
+                         Species == "Di" ~ "Tall unbranched turf",
+                         Species == "Hy" | Species == "Pl" ~ "Weft",
+                         Species == "Po" ~ "Polytrichales",
+                         Species == "Pti" ~ "Leafy liverwort",
+                         Species == "Ra" ~ "Large cushion",
+                         Species == "S" | Species == "Sli" | Species == "Sf" ~ "Sphagnum")) %>%
+  relocate(c(Month, Habitat, BFG), .after = Round)
 #
 # Export main results
 # field_ARA_wide.export <- field_ARA_wide.5 %>%
@@ -569,7 +590,7 @@ Q1_ARA <- field_ARA_wide.5 %>%
 #
 # Transform data
 Q1_ARA <- Q1_ARA %>%
-  select(1:3, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
+  select(1:6, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
   mutate(logEt_prod = log(Et_prod_umol_h_m2+2),
          sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
@@ -600,19 +621,8 @@ Anova(lme1, type=2)
 #
 # Plot ethylene production across the seasons
 Q1_ARA %>%
-  mutate(MP = case_when(Round == 1 ~ "Sept20",
-                        Round == 2 ~ "Oct20",
-                        Round == 3 ~ "Nov20",
-                        Round == 4 ~ "Feb21",
-                        Round == 5 ~ "Mar21",
-                        Round == 6 ~ "May21",
-                        Round == 7 ~ "Jun21",
-                        Round == 8 ~ "Jul21",
-                        Round == 9 ~ "Sept21",
-                        Round == 10 ~ "Oct21",
-                        Round == 11 ~ "Nov21")) %>%
-  mutate(across(MP, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
-  ggplot(aes(y = Et_prod_umol_h_m2, x = MP)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
+  mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
+  ggplot(aes(y = Et_prod_umol_h_m2, x = Month)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
 # There are mostly zero values
 # These zeros could either be true zeros and suggest no activity at all, or activity below detection.
 #
@@ -632,6 +642,26 @@ emmeans(model, ~ Species*Round)
 model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model2,"Species")
+#
+model3 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*BFG, data=Q1_ARA, ziformula=~1, family=gaussian)
+Anova(model3, type = c("II"), test.statistic = c("Chi"), component = "cond")
+emmeans(model3,"Habitat")
+
+
+# Heath
+modelHeath <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA[Q1_ARA$Habitat=="H",], ziformula=~1, family=gaussian)
+Anova(modelHeath, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ       DF    p
+# 110.15  10  < 2.2e-16 
+emmeans(modelHeath,"Species")
+#
+# Mire
+modelMire <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA[Q1_ARA$Habitat=="M",], ziformula=~1, family=gaussian)
+Anova(modelMire, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# χ       DF    p
+# 110.15  10  < 2.2e-16 
+emmeans(modelMire,"Species")
+
 #
 #
 # >>>>>>>>> On a per species level <<<<<<<<<
@@ -818,18 +848,7 @@ EM50_Heath %>%
 #-------  ♪   ARA           ♪ -------
 
 field_ARA_wide.5 %>%
-  mutate(MP = case_when(Round == 1 ~ "Sept20",
-                        Round == 2 ~ "Oct20",
-                        Round == 3 ~ "Nov20",
-                        Round == 4 ~ "Feb21",
-                        Round == 5 ~ "Mar21",
-                        Round == 6 ~ "May21",
-                        Round == 7 ~ "Jun21",
-                        Round == 8 ~ "Jul21",
-                        Round == 9 ~ "Sept21",
-                        Round == 10 ~ "Oct21",
-                        Round == 11 ~ "Nov21"),
-         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+  mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
                              Species == "Di" ~ "Dicranum scoparium",
                              Species == "Hy" ~ "Hylocomium splendens",
                              Species == "Pl" ~ "Pleurozium schreberi",
@@ -840,13 +859,13 @@ field_ARA_wide.5 %>%
                              Species == "Sli" ~ "Sphagnum flexuosum",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species)) %>%
-  mutate(across(MP, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
-  summarise(meanEt_pro = mean(Et_prod_umol_h_m2, na.rm = TRUE), se = sd(Et_prod_umol_h_m2)/sqrt(length(Et_prod_umol_h_m2)), .by = c(MP, Species)) %>%
+  mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
+  summarise(meanEt_pro = mean(Et_prod_umol_h_m2, na.rm = TRUE), se = sd(Et_prod_umol_h_m2)/sqrt(length(Et_prod_umol_h_m2)), .by = c(Month, Species)) %>%
   ggplot() +
-  geom_errorbar(aes(x = MP, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
-  geom_col(aes(x = MP, y = meanEt_pro), color = "black") + 
+  geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
+  geom_col(aes(x = Month, y = meanEt_pro), color = "black") + 
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = "Measuring period (MP)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Moss ethylene production")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Moss ethylene production")) + 
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
   
