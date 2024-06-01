@@ -796,13 +796,13 @@ emmeans(modelSli,"Round")
 #
 # As with the field data, but done for the three rounds
 # For the vial data, the rounds denoted with 5 are in climate chambers at 5 ºC
-Qvial_ARA <- vial_ARA_field %>%
+Qvial_ARA.field <- vial_ARA_field %>%
   mutate(across(Round, ~as.character(.x))) %>%
   mutate(across(c(Block, Species, Round), ~as.factor(.x)))
 #
 # Transform data
-Qvial_ARA <- Qvial_ARA %>%
-  select(1:2,  4, Et_prod_umol_h_m2) %>%
+Qvial_ARA.field <- Qvial_ARA.field %>%
+  select(1:2, 4, Et_prod_umol_h_m2, Soil_moisture, Soil_temperature, PAR, AirT_C) %>%
   mutate(logEt_prod = log(Et_prod_umol_h_m2+2),
          sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
@@ -821,7 +821,7 @@ Qvial_ARA <- Qvial_ARA %>%
 # Linear mixed effects model with both species and round
 lmeVial <- lme(logEt_prod ~ Round*Species,
             random = ~1|Block/Species,
-            data = Qvial_ARA, na.action = na.exclude, method = "REML")
+            data = Qvial_ARA.field, na.action = na.exclude, method = "REML")
 #
 # Using lme4 package:
 # lmer(logEt_prod ~ Round*Species + (1 | Block/Species), data = Q1_ARA, na.action = na.exclude)
@@ -852,9 +852,30 @@ Qvial_ARA.2 %>%
 
 # Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMB package was used
 # Production is square-root transformed
-model_vial <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Qvial_ARA.1, ziformula=~1, family=gaussian)
+model_vial <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
 Anova(model_vial, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model_vial, ~ Species*Round)
+#
+
+Qvial_ARA.field.BlocSp <- Qvial_ARA.field %>% select(Round, Block, Species, Et_prod_umol_h_m2)
+Qvial_ARA.field.value <- Qvial_ARA.field %>% select(AirT_C, Soil_temperature, Soil_moisture, PAR)
+x <- scale(Qvial_ARA.field.value)
+x <- as.data.frame(x)
+x <- bind_cols(Qvial_ARA.field.BlocSp, x)
+
+# Environmental factors
+model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=x, ziformula=~1, family=gaussian)
+Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
+#
+
+Qvial_ARA.field %>%
+  ggplot(aes(x = AirT_C)) + geom_histogram()
+  ggplot(aes(x = PAR, y = Et_prod_umol_h_m2)) + geom_point() + facet_wrap(~Species)
+
+
+model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=x, ziformula=~1, family=gaussian)
+Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
+
 
 
 model_vial2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Qvial_ARA.2, ziformula=~1, family=gaussian)
