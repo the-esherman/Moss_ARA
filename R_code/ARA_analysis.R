@@ -371,29 +371,49 @@ vial_ARA_field.period <- vial_ARA_field %>%
   mutate(across(c(Start, End), hms::as_hms)) %>%
   relocate(c(Start, End), .after = Timestamp) %>%
   # Remove temporary variables
-  select(!c("Date_time", "Tid")) %>%
   select(Round, Date, Start, End) %>%
-  distinct(Round, Date, Start, End, .keep_all = TRUE)
+  distinct(Round, Date, Start, End, .keep_all = TRUE) %>%
+  # A very crude way of adding the 24h period start and end
+  mutate(DateStart = ymd(Date)+hms(Start),
+         DateEnd = ymd(Date+1)+hms(End)) %>%
+  pivot_longer(cols = c(DateStart, DateEnd), names_to = "Datetime", values_to = "Dates") %>%
+  mutate(Date = if_else(Datetime == "DateEnd", Date+1, Date)) %>%
+  pivot_wider(names_from = Datetime, values_from = Dates) %>%
+  mutate(DateEnd = if_else(is.na(DateEnd), ymd(Date+1)+hms(End), DateEnd),
+         DateStart = if_else(is.na(DateStart), ymd(Date-1)+hms(Start), DateStart),
+         # The rounds are not unique, because measurements were done over 2 x 24h periods
+         Roundsub = case_when(Date == ymd("2021-02-11") | Date == ymd("2021-02-12") ~ "A_1",
+                              Date == ymd("2021-02-15") | Date == ymd("2021-02-16") ~ "A_2",
+                              Date == ymd("2021-03-30") | Date == ymd("2021-03-31") & Start == hms::as_hms("16:00:00") ~ "B_1",
+                              Date == ymd("2021-03-31") & Start == hms::as_hms("11:00:00") | Date == ymd("2021-04-01") ~ "B_2",
+                              TRUE ~ Round))
 #
 # Average environmental data for the timeperiod
 field_environ_vial <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
-  left_join(field_ARA.period, by = join_by(Date)) %>%
+  left_join(vial_ARA_field.period, by = join_by(Date), multiple = "all") %>%
   filter(!is.na(Round)) %>%
-  group_by(Date) %>%
-  filter(Tid >= Start & Tid <= End) %>%
+  mutate(Date_time = ymd(Date) + hms(Tid)) %>%
+  group_by(Roundsub) %>%
+  filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
   summarise(Soil_moisture = mean(Soil_moisture),
             Soil_temperature = mean(Soil_temperature),
             PAR = mean(PAR),
             AirT_C = mean(AirT_C)) %>%
   ungroup()
-
-
-
+#
+# Combine environmental data with vial data
 vial_ARA_field <- vial_ARA_field %>%
-  left_join(field_environ.2, by = join_by(Block, Species, Round))
-
-
-
+  mutate(Roundsub = case_when(Date == ymd("2021-02-11") ~ "A_1",
+                              Date == ymd("2021-02-15") ~ "A_2",
+                              Date == ymd("2021-03-30") ~ "B_1",
+                              Date == ymd("2021-03-31") ~ "B_2",
+                              TRUE ~ Round)) %>%
+  relocate(Roundsub, .after = Round) %>%
+  left_join(field_environ_vial, by = join_by(Roundsub))
+#
+# Do the same for climate chamber data
+# Here another set of environmental data is needed, the PAR and temperature was measured, but also assumed to be constant at ~ 5 C.
+#
 # Climate chambers
 vial_ARA_climateChamber <- vial_ARA.3 %>%
   filter(Round == "A5" | Round == "B5" | Round == "C5")
@@ -473,6 +493,22 @@ densityCount.2 <- densityCount %>%
 #-------  »   Environmental NMDS « -------
 #
 # 
+
+
+
+
+# OBS! Jérémy "Birgitte" Monsimet says:
+# CHECK ASSUMPTIONS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# of the ordination
+# If NMDS it uses glmm so check the assumptions
+# PCA also has assumption
+
+# Report stress value!
+
+
+
+
+
 # Extract environmental data
 # Done again (Notice capital F), as to maintain the order of variables with the order from ethylene calculations
 field_environ.3 <- field_ARA_wide.5 %>%
@@ -760,7 +796,7 @@ emmeans(modelSli,"Round")
 #
 # As with the field data, but done for the three rounds
 # For the vial data, the rounds denoted with 5 are in climate chambers at 5 ºC
-Qvial_ARA <- vial_ARA.3 %>%
+Qvial_ARA <- vial_ARA_field %>%
   mutate(across(Round, ~as.character(.x))) %>%
   mutate(across(c(Block, Species, Round), ~as.factor(.x)))
 #
@@ -773,12 +809,12 @@ Qvial_ARA <- Qvial_ARA %>%
          sqEt_prod = Et_prod_umol_h_m2^2,
          ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
          arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))))
-
-Qvial_ARA.1 <- Qvial_ARA %>%
-  filter(Round == "A" | Round == "B" | Round == "C")
-
-Qvial_ARA.2 <- Qvial_ARA %>%
-  filter(Round == "A5" | Round == "B5" | Round == "C5")
+# 
+# Qvial_ARA.1 <- Qvial_ARA %>%
+#   filter(Round == "A" | Round == "B" | Round == "C")
+# 
+# Qvial_ARA.2 <- Qvial_ARA %>%
+#   filter(Round == "A5" | Round == "B5" | Round == "C5")
 
 
 #
