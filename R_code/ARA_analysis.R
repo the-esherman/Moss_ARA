@@ -282,7 +282,7 @@ field_ARA_wide.3 <- field_ARA_wide.2 %>%
 # A       : Area in square meters (m^2)
 #
 field_ARA_wide.4 <- field_ARA_wide.3 %>%
-  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * AirT_C+273) / Ch_area_m2) # Temperature set from T0 at Wetland !!!
+  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h.1 * (Ch_vol_L * p) / (R_const * (AirT_C+273)) / Ch_area_m2) # Temperature set from T0 at Wetland !!!
 #
 # Set negative production to 0
 field_ARA_wide.5 <- field_ARA_wide.4 %>%
@@ -346,7 +346,7 @@ vial_ARA.2 <- vial_ARA.1 %>%
   mutate(Temp_approx_C = case_when(is.na(Temp_approx_C) & Round == "C" ~ 15,
                                    is.na(Temp_approx_C) & Round == "C5" ~ 5,
                                    TRUE ~ Temp_approx_C)) %>%
-  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * Temp_approx_C+273) / Vial_area_m2)
+  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * (Temp_approx_C+273)) / Vial_area_m2)
 #
 # Ethylene production is either greater than 0 or 0. No negative values
 vial_ARA.3 <- vial_ARA.2 %>%
