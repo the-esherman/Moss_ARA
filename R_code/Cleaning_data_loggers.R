@@ -4,7 +4,7 @@
 # Cleaning EM50 and TinyTag information
 #
 #
-#=======  ♣   Libraries     ♣ =======
+#=======  ♣   Libraries         ♣ =======
 library(plotly)
 library(tidyverse)
 library(readxl)
@@ -13,7 +13,7 @@ library(lubridate)
 #
 #
 #
-#=======  ♠   TinyTag     ♠ =======
+#=======  ♠   TinyTag           ♠ =======
 # Load TinyTag temperature measurements
 #
 # Some information on TinyTag dates and daylight saving time (DST)
@@ -147,7 +147,7 @@ write_csv(TinyTag_wetland.2, "Data_clean/AirT_wetland.csv", na = "NA")
 #
 #
 #
-#=======  ♠   EM50        ♠ =======
+#=======  ♠   EM50              ♠ =======
 # ### EM50 loggers ###
 #
 #
@@ -614,4 +614,52 @@ flux_all_TempPAR <- full_join(flux_all_Temp, Positive_PAR, by = "Day_ID")
 #
 #
 #
-#=======  ■  { The End }    ■ =======
+#=======  ♠   Climate Chamber   ♠ =======
+#
+# Air temperature from TinyTags in the climate chamber
+# Load the data in one long list and combine
+#
+AirT_CC_path <- "Data_raw/Loggers/ClimaCell/" 
+AirT_CC_folder <- dir(AirT_CC_path)
+AirT_CC_list <- list()
+#
+# Loop through each file
+for (file in AirT_CC_folder){
+  
+  # Load data: all TinyTag data from the climate chamber
+  AirT_CC_data <- read_csv(paste(AirT_CC_path, file, sep = ""), skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
+  
+  # Add file id to new column
+  AirT_CC_data$id <- str_replace_all(str_replace_all(str_extract(file, ".*\\.csv"), "\\s", "_"), "\\-", ".")
+  
+  # Name each file uniquely, based on filename. Add to list
+  AirT_CC_list[[str_replace_all(str_replace_all(str_extract(file, ".*\\.csv"), "\\s", "_"), "\\-", ".")]] <- AirT_CC_data
+  
+  # Remove temp file
+  rm(AirT_CC_data)
+}
+#
+# Combine into one file
+AirT_CC_all <- do.call(bind_rows, AirT_CC_list)
+#
+# Separate TinyTags at different shelves and the ones in the vial itself
+AirT_CC_all.1 <- AirT_CC_all %>%
+  mutate(loc = str_extract(id, "top|middle|bottom"),
+         loc_vial = str_extract(id, "vial")) %>%
+  mutate(location = if_else(is.na(loc), loc_vial, loc)) %>%
+  select(!c(loc, loc_vial))
+#
+#
+
+
+# PAR
+#
+
+
+
+
+
+#
+#
+#
+#=======  ■  { The End }        ■ =======
