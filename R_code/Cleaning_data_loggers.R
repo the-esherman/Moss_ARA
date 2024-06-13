@@ -69,7 +69,7 @@ x <- TinyTag_heath %>%
 #
 xx <- TinyTag_heath %>%
   filter(n() > 1, .by = c(Day_ID, AirT))
-# No duplicates
+# 8 duplicates
 #
 #
 # Wetland habitat
@@ -642,21 +642,72 @@ for (file in AirT_CC_folder){
 # Combine into one file
 AirT_CC_all <- do.call(bind_rows, AirT_CC_list)
 #
-# Separate TinyTags at different shelves and the ones in the vial itself
+
 AirT_CC_all.1 <- AirT_CC_all %>%
+  #
+  # Separate TinyTags at different shelves and the ones in the vial itself
   mutate(loc = str_extract(id, "top|middle|bottom"),
          loc_vial = str_extract(id, "vial")) %>%
   mutate(location = if_else(is.na(loc), loc_vial, loc)) %>%
-  select(!c(loc, loc_vial))
+  select(!c(loc, loc_vial)) %>%
+  #
+  # Separate unit from temperature
+  separate(AirT, sep = " ", into = c("AirT", "Unit")) %>%           
+  separate(Max_Temp, sep = " ", into = c("Max_Temp_C", "UnitMax")) %>%
+  separate(Min_Temp, sep = " ", into = c("Min_Temp_C", "UnitMin")) %>%
+  mutate(across(AirT, as.numeric)) %>%
+  mutate(across(Date_time, ~ymd_hms(.x))) %>%
+  #
+  # Last measurement round was done in July (UTC+2), and should be converted to UTC+1. If DST is wanted for specific times, use the given code.
+  mutate(Tid = if_else(id == "AirT_20210707.10_ClimaCell_middle_stick.csv" | id == "AirT_20210707.10_ClimaCell_middle.csv" | id == "AirT_20210707.10_ClimaCell_top.csv" | id == "AirT_20210707.10_vial.csv" | id == "AirT_20210707.10_ClimaCell_bottom.csv" | id == "AirT_20210707.10_ClimaCell_middle_air.csv", Date_time-hours(1), Date_time))
 #
 #
+# Separate day and time
+AirT_CC_all.2 <- AirT_CC_all.1 %>%
+  # Round to nearest minute
+  mutate(Tid = round_date(ymd_hms(Date_time), unit = "minute")) %>%
+  mutate(Date = date(Tid),
+         Time = hms::as_hms(Tid)) %>%
+  relocate(c(Date, Time, Tid), .after = Record) %>%
+  # Remove id, duplicate date_time, and units
+  select(!c("id", "Date_time", "Unit", "UnitMax", "UnitMin")) %>%
+  rename("Date_time" = Tid,
+         "AirT_C" = AirT)
+#
+#
+# Visualize the temperature in the climate chambers
+#
+# February measurements
+AirT_CC_all.2 %>%
+  filter(Date >= ymd("2021-02-15") & Date <= ymd("2021-03-20")) %>%
+  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
+
+# April
+AirT_CC_all.2 %>%
+  filter(Date >= ymd("2021-03-21") & Date <= ymd("2021-04-15")) %>%
+  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
+
+# July
+AirT_CC_all.2 %>%
+  filter(Date >= ymd("2021-07-01") & Date <= ymd("2021-07-31")) %>%
+  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
+
+# Something in June?
+AirT_CC_all.2 %>%
+  filter(Date >= ymd("2021-06-01") & Date <= ymd("2021-06-30")) %>%
+  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
 
 
+AirT_CC_all.2 %>%
+  filter(Date == ymd("2021-02-15")) %>%
+  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
+#
+#
+# Save climate chamber air temperature
+write_csv(AirT_CC_all.2, "Data_clean/AirT_CC.csv", na = "NA")
+#
+#
 # PAR
-#
-
-
-
 
 
 #
