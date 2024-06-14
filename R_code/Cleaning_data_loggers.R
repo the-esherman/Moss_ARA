@@ -707,8 +707,108 @@ AirT_CC_all.2 %>%
 write_csv(AirT_CC_all.2, "Data_clean/AirT_CC.csv", na = "NA")
 #
 #
-# PAR
+# PAR sensor in the climate chamber
+#
+# February
+# Two periods of measuring, but all values are in the second data file
+#PAR_CC_feb13 <- read_xls("Data_raw/Loggers/[ClimaCell]EM14979 13feb21-1748.xls", col_names = c("Date_time", "PAR1", "Soil_moist2", "Soil_moist3", "Soil_temp3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+PAR_CC_feb <- read_xls("Data_raw/Loggers/[ClimaCell]EM14979 17feb21-1556.xls", col_names = c("Date_time", "PAR1", "Soil_moist2", "Soil_moist3", "Soil_temp3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  select(Date_time, PAR1, PAR4, PAR5) %>%
+  mutate(PAR2 = NA,
+         PAR3 = NA) %>%
+  relocate(c(PAR2, PAR3), .after = PAR1)
+#
+# April
+PAR_CC_apr <- read_xls("Data_raw/Loggers/[ClimaCell 20210331-0402]EM14946 2apr21-1640.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  select(Date_time, PAR4, PAR5) %>%
+  mutate(PAR1 = NA,
+         PAR2 = NA,
+         PAR3 = NA) %>%
+  relocate(c(PAR1, PAR2, PAR3), .before = PAR4)
+#
+# June
+PAR_CC_jun <- read_xls("Data_raw/Loggers/[20210608-10 CC par]EM14946 10jun21-1606.xls", col_names = c("Date_time", "PAR1", "PAR2", "PAR3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  filter(Date_time >= ymd_hms("2021-04-03T01:00:00")) # Remove earlier measurements
+#
+# July
+PAR_CC_jul <- read_xls("Data_raw/Loggers/[ClimaCell 20210707-10]EM14943 12jul21-1035.xls", col_names = c("Date_time", "PAR1", "PAR2", "PAR3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
+  filter(Date_time >= ymd_hms("2021-07-01T01:00:00")) # Remove earlier measurements
+#
+# Combine PAR measurements
+PAR_CC <- bind_rows(list(PAR_CC_feb, PAR_CC_apr, PAR_CC_jun, PAR_CC_jul))
+#
+# Clean
+PAR_CC.1 <- PAR_CC %>%
+  # As only one sensor is plugged in at a time, it is easy to sum
+  rowwise() %>%
+  mutate(PAR = sum(PAR1, PAR2, PAR3, PAR4, PAR5, na.rm = TRUE)) %>%
+  ungroup() %>%
+  # Alternative method, testing that there is only one sensor plugged (redundant)
+  # mutate(PARx = case_when(!is.na(PAR1) 
+  #                         & (is.na(PAR2) | PAR2 == 0) 
+  #                         & (is.na(PAR3) | PAR3 == 0) 
+  #                         & (is.na(PAR4) | PAR4 == 0) 
+  #                         & (is.na(PAR5) | PAR5 == 0) ~ PAR1,
+  #                        (is.na(PAR1) | PAR1 == 0) 
+  #                        & !is.na(PAR2) 
+  #                        & (is.na(PAR3) | PAR3 == 0) 
+  #                        & (is.na(PAR4) | PAR4 == 0) 
+  #                        & (is.na(PAR5) | PAR5 == 0) ~ PAR2,
+  #                        (is.na(PAR1) | PAR1 == 0)
+  #                        & (is.na(PAR2) | PAR2 == 0)
+  #                        & !is.na(PAR3) 
+  #                        & (is.na(PAR4) | PAR4 == 0) 
+  #                        & (is.na(PAR5) | PAR5 == 0) ~ PAR3,
+  #                        (is.na(PAR1) | PAR1 == 0) 
+  #                        & (is.na(PAR2) | PAR2 == 0) 
+  #                        & (is.na(PAR3) | PAR3 == 0) 
+  #                        & !is.na(PAR4) 
+  #                        & (is.na(PAR5) | PAR5 == 0) ~ PAR4,
+  #                        (is.na(PAR1) | PAR1 == 0) 
+  #                        & (is.na(PAR2) | PAR2 == 0) 
+  #                        & (is.na(PAR3) | PAR3 == 0) 
+  #                        & (is.na(PAR4) | PAR4 == 0)
+  #                        & !is.na(PAR5) ~ PAR5,
+  #                        TRUE ~ NA))
+  select(Date_time, PAR)
+#
+# Check for duplicates
+x <- PAR_CC.1 %>%
+  distinct()
+#
+xx <- PAR_CC.1 %>%
+  filter(n() > 1, .by = c(Date_time, PAR))
+# 0 duplicates
+#
+#
+# Save climate chamber PAR
+write_csv(PAR_CC.1, "Data_clean/PAR_CC.csv", na = "NA")
 
+
+PAR_CC.1 %>%
+  ggplot(aes(x = Date_time, y = PAR)) + geom_point()
+
+# Visualize the temperature in the climate chambers
+#
+# February measurements
+PAR_CC.1 %>%
+  filter(Date >= ymd("2021-02-15") & Date <= ymd("2021-03-20")) %>%
+  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
+
+# April
+PAR_CC.1 %>%
+  filter(Date >= ymd("2021-03-21") & Date <= ymd("2021-04-15")) %>%
+  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
+
+# July
+PAR_CC.1 %>%
+  filter(Date >= ymd("2021-07-01") & Date <= ymd("2021-07-31")) %>%
+  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
+
+# Something in June?
+PAR_CC.1 %>%
+  filter(Date >= ymd("2021-06-01") & Date <= ymd("2021-06-30")) %>%
+  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
 
 #
 #
