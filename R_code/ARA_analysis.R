@@ -40,6 +40,10 @@ AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
 EM50_Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
 EM50_Wetland <- read_csv("Data_clean/Wetland_EM50.csv", col_names = TRUE)
 #
+# Climate chamber environmental parameters
+AirT_CC <- read_csv("Data_clean/AirT_CC.csv", col_names = TRUE)
+PAR_CC <- read_csv("Data_clean/PAR_CC.csv", col_names = TRUE)
+#
 # Chamber size
 Ch_H <- 7 # Chamber height (cm) above moss surface. This needs to be changed to match each plot estimated height
 Ch_r <- 5 # Chamber radius (cm)
@@ -49,6 +53,8 @@ Ch_area_m2 <- (Ch_r^2*pi)/10000 # Chamber area in m2
 # Vial size
 Vial_vol_L <- 20/1000 # 20mL vials, the small ones, and 22 for the taller ones. Does not take into account the actual headspace after mosses
 Vial_area_m2 <- (1.1^2*pi*2)/10000
+#
+Vial_sample_area_m2 <- (2.5^2*pi*2)/10000
 #
 #
 # Constants
@@ -448,21 +454,28 @@ ID_15N <- ID_15N %>%
   select(!c(Sample_ID, Time_nr))
 #
 # Combine 15N data with the ethylene production from the same period.
-# Using field data, since the climate chamber values are mostly 0!
+# Useless, since climate chamber data is 0 for everything but the Sphagnum species
 vial_15N.2 <- vial_ARA.3 %>% 
-  filter(Round == "C") %>%
+  filter(Round == "C5") %>%
   select(Block, Species, Habitat, Et_prod_umol_h_m2) %>%
   left_join(ID_15N, by = join_by(Block, Species)) %>%
   relocate(Et_prod_umol_h_m2, .after = Time_T1) %>%
   left_join(vial_15N, by = join_by(Block, Species)) %>%
+  # µg 15N g-1 DW * g DW = µg 15N
   mutate(Excess_15N = N15_pr_DW*Vial_sample_DW) %>%
+  # µg 15N / µg 15N pr µg N injected = µg N fixed pr sample!
   mutate(Fixed_N = Excess_15N/0.98) %>% # 98% 15N2 used
-  mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N)
+  # µg N pr h pr m2 (assuming 24h incubation)
+  mutate(N_h_m2 = Fixed_N/Vial_sample_area_m2/24,
+         N15_h_m2 = Excess_15N/Vial_sample_area_m2/24) %>%
+  mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N,
+         ARA_ratio = Et_prod_umol_h_m2/N_h_m2)
 
 vial_15N.avg <- vial_15N.2 %>%
   group_by(Species) %>%
   summarise(Et_prod_umol_h_m2 = mean(Et_prod_umol_h_m2, na.rm = TRUE),
-            Fixed_N = mean(Fixed_N, na.rm = TRUE)) %>%
+            Fixed_N = mean(Fixed_N, na.rm = TRUE),
+            N_h_m2 = mean(N_h_m2, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N)
   
