@@ -29,7 +29,8 @@ library(lubridate)
 # [I hate DST, why do we need it?!?]
 #
 #
-# Heath habitat
+#   ## Heath habitat ##
+#
 TinyTag_heath_202101 <- read_csv("Data_raw/Loggers/AirT Heath 202009-202101.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
 TinyTag_heath_202106 <- read_csv("Data_raw/Loggers/AirT Heath 202101-202106.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
 TinyTag_heath_20210824 <- read_csv("Data_raw/Loggers/AirT Heath 20210824.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
@@ -42,37 +43,66 @@ TinyTag_heath_20220721 <- TinyTag_heath_20220721 %>%
 #
 TinyTag_heath_20220916 <- read_csv("Data_raw/Loggers/AirT Heath 20220916.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
 #
-TinyTag_heath <- bind_rows(list(TinyTag_heath_202101, TinyTag_heath_202106, TinyTag_heath_20210824, TinyTag_heath_20220721, TinyTag_heath_20220916))
-# Change accordingly, if only using average temperature and not max and min 
-TinyTag_heath <- TinyTag_heath %>% # Split temperature from the unit and Date and time. Set temperature as numeric
-  separate(AirT, sep = " ", into = c("AirT", "Unit")) %>%
-  separate(Date_time, sep = " ", into = c("Day", "Time")) %>%
-  separate(Time, sep = ":", into = c("hour", "min", "sec")) %>%
-  unite(hour, min, col = "Time", sep = ":") %>%
-  mutate(Date = Day,
-         Timestamp = Time) %>%
-  relocate(Timestamp, .after = Date) %>%
-  unite(Day, Time, col = "Day_ID", sep = " ") %>%
-  select(!"sec") %>%
-  mutate(across(c(AirT), as.numeric))
+TinyTag_heath <- bind_rows(list(TinyTag_heath_202101, TinyTag_heath_202106, TinyTag_heath_20210824, TinyTag_heath_20220721, TinyTag_heath_20220916), .id = "id_file")
 #
-# Graph temperature values
-TinyTag_heath %>%  
-  mutate(across(Day_ID, ~ymd_hm(.x))) %>% 
-  ggplot() + geom_line(aes(x = Day_ID, y = AirT))
+# Separate temperature from unit, remove duplicate measurements. Correct for DST
+TinyTag_heath.1 <- TinyTag_heath %>%
+  separate(AirT, sep = " ", into = c("AirT", "Unit")) %>%
+  separate(Max_Temp, sep = " ", into = c("Max_Temp_C", "UnitMax")) %>%
+  separate(Min_Temp, sep = " ", into = c("Min_Temp_C", "UnitMin")) %>%
+  mutate(across(AirT, as.numeric)) %>%
+  mutate(id_file = case_when(id_file == "1" ~ "h202101",
+                             id_file == "2" ~ "h202106",
+                             id_file == "3" ~ "h202108",
+                             id_file == "4" ~ "h202207",
+                             id_file == "5" ~ "h202209")) %>%
+  mutate(across(Date_time, ~ymd_hms(.x))) %>%
+  # Some changes need to be made as to correct for when measurements were actually taken with respect to DST
+  # h202101 was started on DST, but saved in Winter
+  # h202106 was started in Winter, and saved in Winter !! - Not used
+  # h202108 was started in Winter, but saved on Winter
+  # h202207 was started in Winter, but saved on DST
+  # h202209 was started in DST, and saved in DST !! - Not used
+  filter(id_file == "h202101" | id_file == "h202108" | id_file == "h202207") %>%
+  #
+  # Convert to UTC+1
+  # A mistake was made. The entire dataset of any file saved in DST needs to be converted. If DST is wanted for specific times, use the given code.
+  mutate(Tid = case_when(#id_file == "h202101" # No need to change, as it is already on UTC+1
+                         #id_file == "h202108"  # No need to change, as it is already on UTC+1
+                         id_file == "h202207" & Date_time > ymd_hm("20211031T03:00") & Date_time < ymd_hm("20220327T03:00") ~ Date_time-hours(1),
+                         #id_file == "h202209" ~ Date_time-hours(1), # Not used, but if added it is all DST
+                         TRUE ~ Date_time))
+#
+# Plot 
+TinyTag_heath.1 %>%
+  mutate(across(c(Date_time, Tid), ~ymd_hms(.x))) %>%
+  ggplot(aes(x = Tid, y = AirT, color = id_file)) + geom_line()
 #
 # Missing values from August to December is from logger no longer connecting. Unsure if data available
 #
+# Separate day and time
+TinyTag_heath.2 <- TinyTag_heath.1 %>%
+  mutate(Date = date(Tid),
+         Time = hms::as_hms(Tid)) %>%
+  relocate(c(Date, Time, Tid), .after = Record) %>%
+  select(!c("id_file", "Date_time", "Unit", "UnitMax", "UnitMin")) %>%
+  rename("Date_time" = Tid,
+         "AirT_C" = AirT)
+#
 # Check for duplicates
-x <- TinyTag_heath %>%
+x <- TinyTag_heath.2 %>%
   distinct()
 #
-xx <- TinyTag_heath %>%
-  filter(n() > 1, .by = c(Day_ID, AirT))
-# 8 duplicates
+xx <- TinyTag_heath.2 %>%
+  filter(n() > 1, .by = c(Date_time, AirT_C))
+# 0 duplicates
+#
+# Save Heathland Air temperature
+write_csv(TinyTag_heath.2, "Data_clean/AirT_heath.csv", na = "NA")
 #
 #
-# Wetland habitat
+#   ## Wetland habitat ##
+#
 TinyTag_wetland_202101 <- read_csv("Data_raw/Loggers/AirT Wetland 202007-202101.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
 # All the same values from 202101 are found in the next download in 202102:
 TinyTag_wetland_202102 <- read_csv("Data_raw/Loggers/AirT Wetland 20210219.csv", skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
@@ -630,10 +660,11 @@ for (file in AirT_CC_folder){
   AirT_CC_data <- read_csv(paste(AirT_CC_path, file, sep = ""), skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
   
   # Add file id to new column
-  AirT_CC_data$id <- str_replace_all(str_replace_all(str_extract(file, ".*\\.csv"), "\\s", "_"), "\\-", ".")
+  AirT_CC_data$id <- str_replace_all(str_extract(file, ".*\\.csv"), c("\\s" = "_", "\\-" = "."))
+  
   
   # Name each file uniquely, based on filename. Add to list
-  AirT_CC_list[[str_replace_all(str_replace_all(str_extract(file, ".*\\.csv"), "\\s", "_"), "\\-", ".")]] <- AirT_CC_data
+  AirT_CC_list[[str_replace_all(str_extract(file, ".*\\.csv"), c("\\s" = "_", "\\-" = "."))]] <- AirT_CC_data
   
   # Remove temp file
   rm(AirT_CC_data)
@@ -770,7 +801,25 @@ PAR_CC.1 <- PAR_CC %>%
   #                        & (is.na(PAR4) | PAR4 == 0)
   #                        & !is.na(PAR5) ~ PAR5,
   #                        TRUE ~ NA))
+  # Another alternative (from flux script):
+  # mutate(PAR1 = replace_na(PAR1, 0),
+  #        PAR2 = replace_na(PAR2, 0),
+  #        PAR3 = replace_na(PAR3, 0),
+  #        PAR4 = replace_na(PAR4, 0),
+  #        PAR5 = replace_na(PAR5, 0)) %>%
+  # mutate(PAR = case_when(PAR1 != 0 & PAR2 == 0 & PAR3 == 0 & PAR4 == 0 & PAR5 == 0 ~ PAR1,
+  #                        PAR1 == 0 & PAR2 != 0 & PAR3 == 0 & PAR4 == 0 & PAR5 == 0 ~ PAR2,
+  #                        PAR1 == 0 & PAR2 == 0 & PAR3 != 0 & PAR4 == 0 & PAR5 == 0 ~ PAR3,
+  #                        PAR1 == 0 & PAR2 == 0 & PAR3 == 0 & PAR4 != 0 & PAR5 == 0 ~ PAR4,
+  #                        PAR1 == 0 & PAR2 == 0 & PAR3 == 0 & PAR4 == 0 & PAR5 != 0 ~ PAR5,
+  #                        TRUE ~ 0)) %>%
   select(Date_time, PAR)
+
+
+PAR_CC.1x <- PAR_CC %>%
+  
+  select(Date_time, PAR)
+
 #
 # Check for duplicates
 x <- PAR_CC.1 %>%
