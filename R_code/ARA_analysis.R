@@ -155,6 +155,25 @@ EM50_Wetland.2 <- EM50_Wetland.1 %>%
   select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
   filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
 #
+# Climate chamber
+#
+# PAR
+# Split Date_time into date and time
+PAR_CC <- PAR_CC %>%
+  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time")) %>%
+  mutate(Date = ymd(Date),
+         Time = hms::as_hms(Time))
+#
+# Air temperature
+# Use vial measurements
+# during one period 2 vials were used, as they were blind test. Average temperature of both
+AirT_CC <- AirT_CC %>%
+  filter(location == "vial") %>%
+  select(Date, Time, AirT_C) %>%
+  group_by(Date, Time) %>%
+  summarise(AirT_C = mean(AirT_C, na.rm = T))
+  ungroup()
+#
 #
 #
 #------- • Field data -------
@@ -394,17 +413,17 @@ vial_ARA_field.period <- vial_ARA_field %>%
                               Date == ymd("2021-03-31") & Start == hms::as_hms("11:00:00") | Date == ymd("2021-04-01") ~ "B_2",
                               TRUE ~ Round))
 #
-# Average environmental data for the timeperiod
+# Average environmental data for the time period
 field_environ_vial <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
   left_join(vial_ARA_field.period, by = join_by(Date), multiple = "all") %>%
   filter(!is.na(Round)) %>%
   mutate(Date_time = ymd(Date) + hms(Tid)) %>%
   group_by(Roundsub) %>%
   filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
-  summarise(Soil_moisture = mean(Soil_moisture),
-            Soil_temperature = mean(Soil_temperature),
-            PAR = mean(PAR),
-            AirT_C = mean(AirT_C)) %>%
+  summarise(Soil_moisture = mean(Soil_moisture, na.rm = T),
+            Soil_temperature = mean(Soil_temperature, na.rm = T),
+            PAR = mean(PAR, na.rm = T),
+            AirT_C = mean(AirT_C, na.rm = T)) %>%
   ungroup()
 #
 # Combine environmental data with vial data
@@ -423,7 +442,60 @@ vial_ARA_field <- vial_ARA_field %>%
 # Climate chambers
 vial_ARA_climateChamber <- vial_ARA.3 %>%
   filter(Round == "A5" | Round == "B5" | Round == "C5")
-
+#
+# Add climate data: Air temperature (measured in a vial, but approx. 5°C) and PAR (max power of climate chamber)
+#
+# Select the period, to match interval for environmental data
+vial_ARA_CC.period <- vial_ARA_climateChamber %>%
+  mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
+  mutate(Tid = round_date(ymd_hms(Date_time), unit = "hour")) %>%
+  mutate(Tid = hms::as_hms(Tid)) %>%
+  # Set the times
+  group_by(Round, Date) %>%
+  mutate(Start = floor_date(min(Date_time), unit = "hour"),
+         End = ceiling_date(max(Date_time), unit = "hour")) %>%
+  ungroup() %>%
+  mutate(across(c(Start, End), hms::as_hms)) %>%
+  relocate(c(Start, End), .after = Timestamp) %>%
+  # Remove temporary variables
+  select(Round, Date, Start, End) %>%
+  distinct(Round, Date, Start, End, .keep_all = TRUE) %>%
+  # A very crude way of adding the 24h period start and end
+  mutate(DateStart = ymd(Date)+hms(Start),
+         DateEnd = ymd(Date+1)+hms(End)) %>%
+  pivot_longer(cols = c(DateStart, DateEnd), names_to = "Datetime", values_to = "Dates") %>%
+  mutate(Date = if_else(Datetime == "DateEnd", Date+1, Date)) %>%
+  pivot_wider(names_from = Datetime, values_from = Dates) %>%
+  mutate(DateEnd = if_else(is.na(DateEnd), ymd(Date+1)+hms(End), DateEnd),
+         DateStart = if_else(is.na(DateStart), ymd(Date-1)+hms(Start), DateStart),
+         # The rounds are not unique, because measurements were done over 2 x 24h periods
+         Roundsub = case_when(Date == ymd("2021-02-12") | Date == ymd("2021-02-13") ~ "A5_1",
+                              Date == ymd("2021-02-16") | Date == ymd("2021-02-17") ~ "A5_2",
+                              Date == ymd("2021-03-31") | Date == ymd("2021-04-01") & Start == hms::as_hms("20:00:00") ~ "B5_1",
+                              Date == ymd("2021-04-01") & Start == hms::as_hms("14:00:00") | Date == ymd("2021-04-02") ~ "B5_2",
+                              TRUE ~ Round))
+#
+# Average environmental data for the time period
+CC_environ_vial <- left_join(PAR_CC, AirT_CC, by = join_by(Date, Time)) %>%
+  left_join(vial_ARA_CC.period, by = join_by(Date), multiple = "all") %>%
+  filter(!is.na(Round)) %>%
+  mutate(Date_time = ymd(Date) + hms(Time)) %>%
+  group_by(Roundsub) %>%
+  filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
+  summarise(PAR = mean(PAR, na.rm = T),
+            AirT_C = mean(AirT_C, na.rm = T)) %>%
+  ungroup()
+#
+# Combine environmental data with vial data
+vial_ARA_climateChamber.1 <- vial_ARA_climateChamber %>%
+  mutate(Roundsub = case_when(Date == ymd("2021-02-12") ~ "A5_1",
+                              Date == ymd("2021-02-16") ~ "A5_2",
+                              Date == ymd("2021-03-31") ~ "B5_1",
+                              Date == ymd("2021-04-01") ~ "B5_2",
+                              TRUE ~ Round)) %>%
+  relocate(Roundsub, .after = Round) %>%
+  left_join(CC_environ_vial, by = join_by(Roundsub))
+#
 
 
 
@@ -694,7 +766,7 @@ emmeans(model2,"Species")
 #
 model3 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*BFG, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model3, type = c("II"), test.statistic = c("Chi"), component = "cond")
-emmeans(model3,"Habitat")
+emmeans(model3,"BFG")
 
 
 # Heath
@@ -795,6 +867,10 @@ Anova(modelSli, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ       DF    p
 # 154.95  10  < 2.2e-16
 emmeans(modelSli,"Round")
+
+
+ARAmeans <- summarySE(data = Q1_ARA, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
+
 #
 #
 #
@@ -809,9 +885,19 @@ emmeans(modelSli,"Round")
 #
 # As with the field data, but done for the three rounds
 # For the vial data, the rounds denoted with 5 are in climate chambers at 5 ºC
+#
+# Field vials
 Qvial_ARA.field <- vial_ARA_field %>%
   mutate(across(Round, ~as.character(.x))) %>%
   mutate(across(c(Block, Species, Round), ~as.factor(.x)))
+#
+# Climate chamber
+Qvial_ARA.CC <- vial_ARA_climateChamber %>%
+  mutate(across(Round, ~as.character(.x))) %>%
+  mutate(across(c(Block, Species, Round), ~as.factor(.x)))
+#
+#
+
 #
 # Transform data
 Qvial_ARA.field <- Qvial_ARA.field %>%
