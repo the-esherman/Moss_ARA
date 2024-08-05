@@ -155,14 +155,16 @@ EM50_Wetland.2 <- EM50_Wetland.1 %>%
   select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
   filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
 #
-# Climate chamber
+#    ╔═══════════════════════════════╗
+# -- • Climate chamber environmental • --
+#    ╚═══════════════════════════════╝
 #
 # PAR
 # Split Date_time into date and time
 PAR_CC <- PAR_CC %>%
-  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time")) %>%
+  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Tid")) %>%
   mutate(Date = ymd(Date),
-         Time = hms::as_hms(Time))
+         Tid = hms::as_hms(Tid))
 #
 # Air temperature
 # Use vial measurements
@@ -171,8 +173,9 @@ AirT_CC <- AirT_CC %>%
   filter(location == "vial") %>%
   select(Date, Time, AirT_C) %>%
   group_by(Date, Time) %>%
-  summarise(AirT_C = mean(AirT_C, na.rm = T))
-  ungroup()
+  summarise(AirT_C = mean(AirT_C, na.rm = T)) %>%
+  ungroup() %>%
+  rename("Tid" = Time)
 #
 #
 #
@@ -347,8 +350,9 @@ field_ARA_wide.5 <- field_ARA_wide.4 %>%
 #
 # Load and select important parts of the vial data
 vial_ARA.1 <- vial_ARA %>%
-  mutate(Species = str_replace_all(Species, "M", "B")) %>% #Replace M for Myren with B for Blank
-  filter(!str_starts(Species, "v")) #Remove vial tests
+  mutate(Species = str_replace_all(Species, "M", "B")) %>% #Replace M for Myren/mire with B for Blank
+  filter(!str_starts(Species, "v")) %>% #Remove vial tests
+  select(!Temp_approx_C)
 #
 # Blanks
 # Averaged for each round and habitat
@@ -361,30 +365,16 @@ vial_ARA.b <- vial_ARA.1 %>%
 #
 # Join blanks to non-blanks and correct
 vial_ARA.2 <- vial_ARA.1 %>%
-  filter(!str_starts(Species, "B")) %>%
-  mutate(Habitat = if_else(str_starts(Species, "S"), "M", "H")) %>%
-  left_join(vial_ARA.b, by = join_by(Round, Habitat), multiple = "all") %>%
+  filter(!str_starts(Species, "B")) %>% # remove blanks
+  mutate(Habitat = if_else(str_starts(Species, "S"), "M", "H")) %>% # add habitat, Sphagnums are in the mire
+  left_join(vial_ARA.b, by = join_by(Round, Habitat), multiple = "all") %>% # Add blanks
   mutate(Time24 = hour(seconds_to_period(hms(Time_from_T0) - hms(Timestamp)))*60 + minute(seconds_to_period(hms(Time_from_T0) - hms(Timestamp))) + 24*60) %>%
   mutate(Et_prod_ppm_pr_h = (Ethyl_conc_ppm - Ethyl_blank)/(Time24),
          Act_lost_ppm_pr_h = (Acet_conc_prC*10000 - Acet_blank*10000)/(Time24)) %>%
-  mutate(Corr_Et_prod_pr_h = Et_prod_ppm_pr_h - (Act_lost_ppm_pr_h*(Ethyl_blank/Acet_blank))) %>%
-  mutate(Temp_approx_C = case_when(is.na(Temp_approx_C) & Round == "C" ~ 15,
-                                   is.na(Temp_approx_C) & Round == "C5" ~ 5,
-                                   TRUE ~ Temp_approx_C)) %>%
-  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * (Temp_approx_C+273)) / Vial_area_m2)
-#
-# Ethylene production is either greater than 0 or 0. No negative values
-vial_ARA.3 <- vial_ARA.2 %>%
-  mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
-#
-# Field samples
-vial_ARA_field <- vial_ARA.3 %>%
-  filter(Round == "A" | Round == "B" | Round == "C")
-#
-# Add climate data: Air temperature (not exactly what is found) and PAR
+  mutate(Corr_Et_prod_pr_h = Et_prod_ppm_pr_h - (Act_lost_ppm_pr_h*(Ethyl_blank/Acet_blank)))
 #
 # Select the period, to match interval for environmental data
-vial_ARA_field.period <- vial_ARA_field %>%
+vial_ARA.period <- vial_ARA.2 %>%
   mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
   mutate(Tid = round_date(ymd_hms(Date_time), unit = "hour")) %>%
   mutate(Tid = hms::as_hms(Tid)) %>%
@@ -406,96 +396,73 @@ vial_ARA_field.period <- vial_ARA_field %>%
   pivot_wider(names_from = Datetime, values_from = Dates) %>%
   mutate(DateEnd = if_else(is.na(DateEnd), ymd(Date+1)+hms(End), DateEnd),
          DateStart = if_else(is.na(DateStart), ymd(Date-1)+hms(Start), DateStart),
-         # The rounds are not unique, because measurements were done over 2 x 24h periods
-         Roundsub = case_when(Date == ymd("2021-02-11") | Date == ymd("2021-02-12") ~ "A_1",
-                              Date == ymd("2021-02-15") | Date == ymd("2021-02-16") ~ "A_2",
-                              Date == ymd("2021-03-30") | Date == ymd("2021-03-31") & Start == hms::as_hms("16:00:00") ~ "B_1",
-                              Date == ymd("2021-03-31") & Start == hms::as_hms("11:00:00") | Date == ymd("2021-04-01") ~ "B_2",
+         # The rounds are not unique, because measurements were done over 2 x 24h periods except for round C
+         Roundsub = case_when(Round == "A" & Date == ymd("2021-02-11") | Round == "A" & Date == ymd("2021-02-12") ~ "A_1",
+                              Round == "A" & Date == ymd("2021-02-15") | Round == "A" & Date == ymd("2021-02-16") ~ "A_2",
+                              Round == "B" & Date == ymd("2021-03-30") | Round == "B" & Date == ymd("2021-03-31") & Start == hms::as_hms("16:00:00") ~ "B_1",
+                              Round == "B" & Date == ymd("2021-03-31") & Start == hms::as_hms("11:00:00") | Round == "B" & Date == ymd("2021-04-01") ~ "B_2",
+                              # ↑ 
+                              # Field
+                              # Climate chamber
+                              # ↓ 
+                              Round == "A5" & Date == ymd("2021-02-12") | Round == "A5" & Date == ymd("2021-02-13") ~ "A5_1",
+                              Round == "A5" & Date == ymd("2021-02-16") | Round == "A5" & Date == ymd("2021-02-17") ~ "A5_2",
+                              Round == "B5" & Date == ymd("2021-03-31") | Round == "B5" & Date == ymd("2021-04-01") & Start == hms::as_hms("20:00:00") ~ "B5_1",
+                              Round == "B5" & Date == ymd("2021-04-01") & Start == hms::as_hms("14:00:00") | Round == "B5" & Date == ymd("2021-04-02") ~ "B5_2",
                               TRUE ~ Round))
 #
 # Average environmental data for the time period
-field_environ_vial <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
-  left_join(vial_ARA_field.period, by = join_by(Date), multiple = "all") %>%
+environ_vial <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
+  left_join(PAR_CC, by = join_by(Date, Tid)) %>%
+  left_join(AirT_CC, by = join_by(Date, Tid)) %>%
+  left_join(vial_ARA.period, by = join_by(Date), multiple = "all") %>%
   filter(!is.na(Round)) %>%
   mutate(Date_time = ymd(Date) + hms(Tid)) %>%
   group_by(Roundsub) %>%
   filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
-  summarise(Soil_moisture = mean(Soil_moisture, na.rm = T),
-            Soil_temperature = mean(Soil_temperature, na.rm = T),
-            PAR = mean(PAR, na.rm = T),
-            AirT_C = mean(AirT_C, na.rm = T)) %>%
-  ungroup()
+  summarise(PAR.field = mean(PAR.x, na.rm = T),
+            AirT_C.field = mean(AirT_C.x, na.rm = T),
+            PAR.cc = mean(PAR.y, na.rm = T),
+            AirT_C.cc = mean(AirT_C.y, na.rm = T)) %>%
+  ungroup() %>%
+  mutate(PAR = if_else(str_detect(Roundsub, "5"), PAR.cc, PAR.field),
+         AirT_C = if_else(str_detect(Roundsub, "5"), AirT_C.cc, AirT_C.field)) %>%
+  select(!c(PAR.field, AirT_C.field, PAR.cc, AirT_C.cc))
 #
-# Combine environmental data with vial data
-vial_ARA_field <- vial_ARA_field %>%
+# Combine environmental data with vial data and calculate ethylene production
+vial_ARA.3 <- vial_ARA.2 %>%
   mutate(Roundsub = case_when(Date == ymd("2021-02-11") ~ "A_1",
                               Date == ymd("2021-02-15") ~ "A_2",
                               Date == ymd("2021-03-30") ~ "B_1",
                               Date == ymd("2021-03-31") ~ "B_2",
+                              # ↑ 
+                              # Field
+                              # Climate chamber
+                              # ↓ 
+                              str_detect(Round, "5") & Date == ymd("2021-02-12") ~ "A5_1",
+                              str_detect(Round, "5") & Date == ymd("2021-02-16") ~ "A5_2",
+                              str_detect(Round, "5") & Date == ymd("2021-03-31") ~ "B5_1",
+                              str_detect(Round, "5") & Date == ymd("2021-04-01") ~ "B5_2",
                               TRUE ~ Round)) %>%
   relocate(Roundsub, .after = Round) %>%
-  left_join(field_environ_vial, by = join_by(Roundsub))
+  left_join(environ_vial, by = join_by(Roundsub)) %>%
+  mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * (AirT_C+273)) / Vial_area_m2) %>%
+  # Ethylene production is either greater than 0 or 0. No negative values
+  mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
 #
-# Do the same for climate chamber data
-# Here another set of environmental data is needed, the PAR and temperature was measured, but also assumed to be constant at ~ 5 C.
+#    ╔═════════════╗
+# -- • Field vials • --
+#    ╚═════════════╝
 #
-# Climate chambers
+vial_ARA_field <- vial_ARA.3 %>%
+  filter(Round == "A" | Round == "B" | Round == "C")
+#
+#    ╔═══════════════════════╗
+# -- • Climate chamber vials • --
+#    ╚═══════════════════════╝
+#
 vial_ARA_climateChamber <- vial_ARA.3 %>%
   filter(Round == "A5" | Round == "B5" | Round == "C5")
-#
-# Add climate data: Air temperature (measured in a vial, but approx. 5°C) and PAR (max power of climate chamber)
-#
-# Select the period, to match interval for environmental data
-vial_ARA_CC.period <- vial_ARA_climateChamber %>%
-  mutate(Date_time = ymd(Date) + hms(Timestamp)) %>%
-  mutate(Tid = round_date(ymd_hms(Date_time), unit = "hour")) %>%
-  mutate(Tid = hms::as_hms(Tid)) %>%
-  # Set the times
-  group_by(Round, Date) %>%
-  mutate(Start = floor_date(min(Date_time), unit = "hour"),
-         End = ceiling_date(max(Date_time), unit = "hour")) %>%
-  ungroup() %>%
-  mutate(across(c(Start, End), hms::as_hms)) %>%
-  relocate(c(Start, End), .after = Timestamp) %>%
-  # Remove temporary variables
-  select(Round, Date, Start, End) %>%
-  distinct(Round, Date, Start, End, .keep_all = TRUE) %>%
-  # A very crude way of adding the 24h period start and end
-  mutate(DateStart = ymd(Date)+hms(Start),
-         DateEnd = ymd(Date+1)+hms(End)) %>%
-  pivot_longer(cols = c(DateStart, DateEnd), names_to = "Datetime", values_to = "Dates") %>%
-  mutate(Date = if_else(Datetime == "DateEnd", Date+1, Date)) %>%
-  pivot_wider(names_from = Datetime, values_from = Dates) %>%
-  mutate(DateEnd = if_else(is.na(DateEnd), ymd(Date+1)+hms(End), DateEnd),
-         DateStart = if_else(is.na(DateStart), ymd(Date-1)+hms(Start), DateStart),
-         # The rounds are not unique, because measurements were done over 2 x 24h periods
-         Roundsub = case_when(Date == ymd("2021-02-12") | Date == ymd("2021-02-13") ~ "A5_1",
-                              Date == ymd("2021-02-16") | Date == ymd("2021-02-17") ~ "A5_2",
-                              Date == ymd("2021-03-31") | Date == ymd("2021-04-01") & Start == hms::as_hms("20:00:00") ~ "B5_1",
-                              Date == ymd("2021-04-01") & Start == hms::as_hms("14:00:00") | Date == ymd("2021-04-02") ~ "B5_2",
-                              TRUE ~ Round))
-#
-# Average environmental data for the time period
-CC_environ_vial <- left_join(PAR_CC, AirT_CC, by = join_by(Date, Time)) %>%
-  left_join(vial_ARA_CC.period, by = join_by(Date), multiple = "all") %>%
-  filter(!is.na(Round)) %>%
-  mutate(Date_time = ymd(Date) + hms(Time)) %>%
-  group_by(Roundsub) %>%
-  filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
-  summarise(PAR = mean(PAR, na.rm = T),
-            AirT_C = mean(AirT_C, na.rm = T)) %>%
-  ungroup()
-#
-# Combine environmental data with vial data
-vial_ARA_climateChamber <- vial_ARA_climateChamber %>%
-  mutate(Roundsub = case_when(Date == ymd("2021-02-12") ~ "A5_1",
-                              Date == ymd("2021-02-16") ~ "A5_2",
-                              Date == ymd("2021-03-31") ~ "B5_1",
-                              Date == ymd("2021-04-01") ~ "B5_2",
-                              TRUE ~ Round)) %>%
-  relocate(Roundsub, .after = Round) %>%
-  left_join(CC_environ_vial, by = join_by(Roundsub))
-#
 
 
 
