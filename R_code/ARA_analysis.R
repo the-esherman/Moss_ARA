@@ -661,12 +661,20 @@ Q1_ARA <- field_ARA_wide.5 %>%
 # Transform data
 Q1_ARA <- Q1_ARA %>%
   select(1:6, AirT_C, Soil_temperature, Soil_moisture, PAR, Et_prod_umol_h_m2) %>%
-  mutate(logEt_prod = log(Et_prod_umol_h_m2+2),
+  mutate(logEt_prod = log(Et_prod_umol_h_m2+5),
          sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
          sqEt_prod = Et_prod_umol_h_m2^2,
          ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
          arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))))
+#
+# Graph without 0 values to see distribution with transformation
+Q1_ARA %>%
+  filter(Et_prod_umol_h_m2 != 0) %>% # & Et_prod_umol_h_m2 < 10 # Remove zeros (and extreme values)
+  #  ggplot(aes(x = Round, y = (Et_prod_umol_h_m2))) + geom_point()
+  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram()
+# Heavily right-skewed, for pretty much all transformations
+# A right-skewed Poisson distribution?
 #
 # Linear mixed effects model with both species and round
 lme1 <- lme(logEt_prod ~ Round*Species,
@@ -696,28 +704,48 @@ Q1_ARA %>%
 # There are mostly zero values
 # These zeros could either be true zeros and suggest no activity at all, or activity below detection.
 #
-# A right-skewed Poisson distribution?
-Q1_ARA %>%
-#  filter(Et_prod_umol_h_m2 > 0) %>% # & Et_prod_umol_h_m2 < 10 Remove zeros (and extreme values)
-  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram() 
-#  ggplot(aes(x = log(Et_prod_umol_h_m2+1))) + geom_histogram()
-#
 #
 # Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMB package was used
 # Production is square-root transformed
+#
+#       ╔═══════════╗
+# -- »»» Seasonality ««« --
+#       ╚═══════════╝
+#
 model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model, ~ Species*Round)
+#
+#       ╔═════════════════════╗
+# -- »»» Environmental drivers ««« --
+#       ╚═════════════════════╝
 #
 model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model2,"Species")
 #
+# For environmental data, scale data
+Q1_ARA.BlocSp <- Q1_ARA %>% select(Round, Block, Species, Et_prod_umol_h_m2)
+Q1_ARA.value <- Q1_ARA %>% select(AirT_C, PAR, Soil_temperature, Soil_moisture)
+Q1_ARA.scaled <- scale(Q1_ARA.value)
+Q1_ARA.scaled <- as.data.frame(Q1_ARA.scaled)
+Q1_ARA.scaled <- bind_cols(Q1_ARA.BlocSp, Q1_ARA.scaled)
+#
+model2.2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Q1_ARA.scaled, ziformula=~1, family=gaussian)
+Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
+#
+#       ╔═══╗
+# -- »»» BFG ««« --
+#       ╚═══╝
+#
 model3 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*BFG, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model3, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model3,"BFG")
-
-
+#
+#       ╔═══════╗
+# -- »»» Habitat ««« --
+#       ╚═══════╝
+#
 # Heath
 modelHeath <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA[Q1_ARA$Habitat=="H",], ziformula=~1, family=gaussian)
 Anova(modelHeath, type = c("II"), test.statistic = c("Chi"), component = "cond")
@@ -731,12 +759,11 @@ Anova(modelMire, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ       DF    p
 # 110.15  10  < 2.2e-16 
 emmeans(modelMire,"Species")
-
 #
-#
-# >>>>>>>>> On a per species level <<<<<<<<<
-# >>>>>>>>> Simply modeled against round <<<<<<<<<
-#
+#       ╔════════════════════════════╗
+# -- »»» Model on a per species level ««« --
+# -- »»» Simply modeled against round ««« --
+#       ╚════════════════════════════╝
 #
 # Au
 modelAu <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round) ,data=Q1_ARA[Q1_ARA$Species=="Au",], ziformula=~1, family=gaussian)
@@ -816,10 +843,9 @@ Anova(modelSli, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ       DF    p
 # 154.95  10  < 2.2e-16
 emmeans(modelSli,"Round")
-
-
+#
+# mean value per measuring period per species
 ARAmeans <- summarySE(data = Q1_ARA, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
-
 #
 #
 #
@@ -923,7 +949,7 @@ Qvial_ARA.CC %>%
   filter(Et_prod_umol_h_m2 != 0) %>%
   #  ggplot(aes(x = Round, y = (Et_prod_umol_h_m2))) + geom_point()
   ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram()
-# removing 0's and using square-root transformation gives something alike a normal distribution
+# removing 0's and using square-root transformation gives something closer to a normal distribution
 #
 # Model - glmmTMB
 # Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMB package was used
