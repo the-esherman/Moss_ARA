@@ -463,25 +463,7 @@ vial_ARA_field <- vial_ARA.3 %>%
 #
 vial_ARA_climateChamber <- vial_ARA.3 %>%
   filter(Round == "A5" | Round == "B5" | Round == "C5")
-
-
-
-
-
-vial_ARA.3 %>%
-  ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species, scales = "free")
-
-
-
-vial_ARA_field %>%
-  ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species)
-
-vial_ARA_climateChamber %>%
-  ggplot(aes(y = Et_prod_umol_h_m2, x = Round)) + geom_boxplot() + facet_wrap(~Species)
-
-
-# ??
-#mutate(across(Timestamp, ~hm(.x)))# %>%
+#
 #
 #
 #------- • 15N data -------
@@ -863,7 +845,7 @@ Qvial_ARA.field <- vial_ARA_field %>%
 #
 # Transform data
 Qvial_ARA.field <- Qvial_ARA.field %>%
-  select(1:2, 4, Et_prod_umol_h_m2, Soil_moisture, Soil_temperature, PAR, AirT_C) %>%
+  select(1:2, 4, Et_prod_umol_h_m2, PAR, AirT_C) %>%
   mutate(logEt_prod = log(Et_prod_umol_h_m2+5),
          sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
@@ -892,7 +874,7 @@ qqnorm(resid(lmeVial), main = "Normally distributed?")
 qqline(resid(lmeVial), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lmeVial)
 par(mfrow = c(1,1))
-# Values are not very good because of several zero values.
+# Values are not very good because of several zero values. -> use glmmTMB with zero-inflation
 #
 # model output
 Anova(lmeVial, type=2)
@@ -906,13 +888,13 @@ emmeans(model_vial, ~ Species*Round)
 #
 # For environmental data, scale data
 Qvial_ARA.field.BlocSp <- Qvial_ARA.field %>% select(Round, Block, Species, Et_prod_umol_h_m2)
-Qvial_ARA.field.value <- Qvial_ARA.field %>% select(AirT_C, Soil_temperature, Soil_moisture, PAR)
+Qvial_ARA.field.value <- Qvial_ARA.field %>% select(AirT_C, PAR)
 Qvial_ARA.field.scaled <- scale(Qvial_ARA.field.value)
 Qvial_ARA.field.scaled <- as.data.frame(Qvial_ARA.field.scaled)
 Qvial_ARA.field.scaled <- bind_cols(Qvial_ARA.field.BlocSp, Qvial_ARA.field.scaled)
 #
 # glmmTMB with environmental data
-model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Qvial_ARA.field.scaled, ziformula=~1, family=gaussian)
+model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*Species, data=Qvial_ARA.field.scaled, ziformula=~1, family=gaussian)
 Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # Problem with rank deficiency
 #
