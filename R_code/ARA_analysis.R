@@ -24,10 +24,12 @@ library(ggrepel)
 ID_info <- read_xlsx("Data_raw/Data_ID.xlsx")
 ID_15N <- read_xlsx("Data_raw/ID_15N.xlsx")
 #
-# Import field and vial datasets
+#    ╔═══════╗
+# -- • Field • --
+#    ╚═══════╝
+#
+# Import field datasets
 field_ARA <- read_csv("Data_clean/field_ARA.csv", col_names = TRUE)
-vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
-vial_15N <- read_csv("Data_clean/vial_15N.csv", col_names = TRUE)
 #
 # Bryophyte density count
 densityCount <- read_xlsx("Data_raw/Moss counts.xlsx")
@@ -40,15 +42,26 @@ AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
 EM50_Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
 EM50_Wetland <- read_csv("Data_clean/Wetland_EM50.csv", col_names = TRUE)
 #
-# Climate chamber environmental parameters
-AirT_CC <- read_csv("Data_clean/AirT_CC.csv", col_names = TRUE)
-PAR_CC <- read_csv("Data_clean/PAR_CC.csv", col_names = TRUE)
-#
 # Chamber size
 Ch_H <- 7 # Chamber height (cm) above moss surface. This needs to be changed to match each plot estimated height
 Ch_r <- 5 # Chamber radius (cm)
 Ch_vol_L <- (Ch_r^2*pi*Ch_H)/1000 # Chamber vol in L
 Ch_area_m2 <- (Ch_r^2*pi)/10000 # Chamber area in m2
+#
+#    ╔═══════╗
+# -- • Vials • --
+#    ╚═══════╝
+#
+# Import vial dataset
+vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
+vial_15N <- read_csv("Data_clean/vial_15N.csv", col_names = TRUE)
+#
+# Climate chamber environmental parameters
+AirT_CC <- read_csv("Data_clean/AirT_CC.csv", col_names = TRUE)
+PAR_CC <- read_csv("Data_clean/PAR_CC.csv", col_names = TRUE)
+#
+# Vial moisture
+vial_moisture <- read_csv("Data_clean/vial_moisture.csv", col_names = TRUE)
 #
 # Vial size
 Vial_vol_L <- 20/1000 # 20mL vials, the small ones, and 22 for the taller ones. Does not take into account the actual headspace after mosses
@@ -56,8 +69,9 @@ Vial_area_m2 <- (1.1^2*pi*2)/10000
 #
 Vial_sample_area_m2 <- (2.5^2*pi*2)/10000
 #
-#
-# Constants
+#    ╔═══════════╗
+# -- • Constants • --
+#    ╚═══════════╝
 #
 # Gas constant ~ 8.31446261815324 L kPa K^-1 µmol^-1
 # Avogadro constant × Boltzmann constant: N_A × k
@@ -176,6 +190,24 @@ AirT_CC <- AirT_CC %>%
   summarise(AirT_C = mean(AirT_C, na.rm = T)) %>%
   ungroup() %>%
   rename("Tid" = Time)
+#
+# Vial moisture
+vial_moisture <- vial_moisture %>%
+  filter(Time_nr != "c_NatAb") %>% # the moisture of natural abundance samples are not relevant for ARA, only for N2 fixation
+  select(!c(Sample_ID, WW, DW, Count, H2O)) # Remove unused variables
+#
+# Vial field
+vial_moisture.field <- vial_moisture %>%
+  mutate(Round = str_to_upper(Time_nr)) %>% # Add round
+  relocate(Round, .after = Species) %>%
+  select(!Time_nr)
+#
+# Vial climate chamber
+# Note that this is identical, but for the climate chamber
+vial_moisture.CC <- vial_moisture %>%
+  mutate(Round = str_c(str_to_upper(Time_nr), "5")) %>% # Add round, but note that for climate chamber rounds add a "5"
+  relocate(Round, .after = Species) %>%
+  select(!Time_nr)
 #
 #
 #
@@ -455,14 +487,18 @@ vial_ARA.3 <- vial_ARA.2 %>%
 #    ╚═════════════╝
 #
 vial_ARA_field <- vial_ARA.3 %>%
-  filter(Round == "A" | Round == "B" | Round == "C")
+  filter(Round == "A" | Round == "B" | Round == "C") %>%
+  left_join(vial_moisture.field, by = join_by(Block, Species, Round)) %>%
+  relocate(GWC, .before = Et_prod_umol_h_m2)
 #
 #    ╔═══════════════════════╗
 # -- • Climate chamber vials • --
 #    ╚═══════════════════════╝
 #
 vial_ARA_climateChamber <- vial_ARA.3 %>%
-  filter(Round == "A5" | Round == "B5" | Round == "C5")
+  filter(Round == "A5" | Round == "B5" | Round == "C5") %>%
+  left_join(vial_moisture.CC, by = join_by(Block, Species, Round)) %>%
+  relocate(GWC, .before = Et_prod_umol_h_m2)
 #
 #
 #
