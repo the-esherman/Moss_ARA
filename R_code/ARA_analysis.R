@@ -434,7 +434,7 @@ vial_ARA.3 <- vial_ARA.2 %>%
   mutate(Roundsub = case_when(Date == ymd("2021-02-11") ~ "A_1",
                               Date == ymd("2021-02-15") ~ "A_2",
                               Date == ymd("2021-03-30") ~ "B_1",
-                              Date == ymd("2021-03-31") ~ "B_2",
+                              !str_detect(Round, "5") & Date == ymd("2021-03-31") ~ "B_2",
                               # ↑ 
                               # Field
                               # Climate chamber
@@ -731,8 +731,8 @@ Q1_ARA.scaled <- scale(Q1_ARA.value)
 Q1_ARA.scaled <- as.data.frame(Q1_ARA.scaled)
 Q1_ARA.scaled <- bind_cols(Q1_ARA.BlocSp, Q1_ARA.scaled)
 #
-model2.2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Q1_ARA.scaled, ziformula=~1, family=gaussian)
-Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
+model2.2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_temperature*Soil_moisture*PAR*Species, data=Q1_ARA.scaled, ziformula=~1, family=gaussian)
+Anova(model2.2, type = c("II"), test.statistic = c("Chi"), component = "cond")
 #
 #       ╔═══╗
 # -- »»» BFG ««« --
@@ -922,7 +922,9 @@ Qvial_ARA.field.scaled <- bind_cols(Qvial_ARA.field.BlocSp, Qvial_ARA.field.scal
 # glmmTMB with environmental data
 model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*Species, data=Qvial_ARA.field.scaled, ziformula=~1, family=gaussian)
 Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# Problem with rank deficiency
+#
+# mean value per measuring period per species
+vial.field.means <- summarySE(data = Qvial_ARA.field, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
 #
 #
 #       ╔═════════════════════╗
@@ -967,7 +969,9 @@ Qvial_ARA.CC.scaled <- bind_cols(Qvial_ARA.CC.BlocSp, Qvial_ARA.CC.scaled)
 # glmmTMB with environmental data
 model_vial.CC.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*Species, data=Qvial_ARA.CC.scaled, ziformula=~1, family=gaussian)
 Anova(model_vial.CC.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# "Model convergence problem; non-positive-definite Hessian matrix"
+#
+# mean value per measuring period per species
+vial.CC.means <- summarySE(data = Qvial_ARA.CC, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
 #
 #
 #
@@ -1041,6 +1045,18 @@ field_ARA_wide.5 %>%
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
   
+
+vial_ARA_field %>%
+  ggplot() +
+  geom_boxplot(aes(y = Et_prod_umol_h_m2, x = Round)) +
+  facet_wrap(~Species, scales = "free")
+
+
+vial_ARA_field %>%
+  ggplot() +
+  geom_boxplot(aes(y = AirT_C, x = Round)) +
+  facet_wrap(~Species, scales = "free")
+
 #
 #
 #
