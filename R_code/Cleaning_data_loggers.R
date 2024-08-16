@@ -862,4 +862,28 @@ PAR_CC.1 %>%
 #
 #
 #
+#=======  ♠   Vial moisture     ♠ =======
+#
+# vial moisture from all three rounds
+vial_moisture_A <- read_xlsx("Data_raw/Moss weight 24h vials v3.xlsx", sheet = "Run A", col_names = TRUE)
+vial_moisture_B <- read_xlsx("Data_raw/Moss weight 24h vials v3.xlsx", sheet = "Run B", col_names = TRUE)
+vial_moisture_C <- read_xlsx("Data_raw/Moss weight 24h vials v3.xlsx", sheet = "Run C (nr 8)", col_names = TRUE)
+vial_moisture_C_NatAb <- read_xlsx("Data_raw/Moss weight 24h vials v3.xlsx", sheet = "Run C NatAbu", col_names = TRUE)
+#
+# Combine
+vial_moisture <- bind_rows(list(vial_moisture_A, vial_moisture_B, vial_moisture_C, vial_moisture_C_NatAb)) %>%
+  select(!c(Notes, Extra_water)) %>% 
+  # Extra water is from ice or snow that could not be removed from the sample. This is not really relevant for the moisture content, but I am unsure what the number represents. It is less than the vial weight, so cannot represent the vial + either bryophyte nor vial + extra water. It also cannot be extra water alone
+  # It is possible that the actual vial weight is the one given in "Extra_water" and the value in "Vial" already accounts for this.
+  mutate(WW = Weight_wVial - Vial) %>%
+  mutate(H2O = WW-DW,
+         GWC = (WW-DW)/DW) %>%
+  relocate(WW, .before = DW) %>%
+  select(!c(Weight_wVial, Vial))
+#
+# Save combined data
+write_csv(vial_moisture, "Data_clean/vial_moisture.csv", na = "NA")
+#
+#
+#
 #=======  ■  { The End }        ■ =======
