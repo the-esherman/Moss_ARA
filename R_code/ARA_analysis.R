@@ -907,7 +907,7 @@ Qvial_ARA.field <- vial_ARA_field %>%
 #
 # Transform data
 Qvial_ARA.field <- Qvial_ARA.field %>%
-  select(1:2, 4, Et_prod_umol_h_m2, PAR, AirT_C) %>%
+  select(1:2, 4, Et_prod_umol_h_m2, PAR, AirT_C, GWC) %>%
   mutate(logEt_prod = log(Et_prod_umol_h_m2+5),
          sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
@@ -950,13 +950,13 @@ emmeans(model_vial, ~ Species*Round)
 #
 # For environmental data, scale data
 Qvial_ARA.field.BlocSp <- Qvial_ARA.field %>% select(Round, Block, Species, Et_prod_umol_h_m2)
-Qvial_ARA.field.value <- Qvial_ARA.field %>% select(AirT_C, PAR)
+Qvial_ARA.field.value <- Qvial_ARA.field %>% select(AirT_C, PAR, GWC)
 Qvial_ARA.field.scaled <- scale(Qvial_ARA.field.value)
 Qvial_ARA.field.scaled <- as.data.frame(Qvial_ARA.field.scaled)
 Qvial_ARA.field.scaled <- bind_cols(Qvial_ARA.field.BlocSp, Qvial_ARA.field.scaled)
 #
 # glmmTMB with environmental data
-model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*Species, data=Qvial_ARA.field.scaled, ziformula=~1, family=gaussian)
+model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*GWC*Species, data=Qvial_ARA.field.scaled, ziformula=~1, family=gaussian)
 Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
 #
 # mean value per measuring period per species
@@ -973,7 +973,7 @@ Qvial_ARA.CC <- vial_ARA_climateChamber %>%
 #
 # Transform data
 Qvial_ARA.CC <- Qvial_ARA.CC %>%
-  select(1:2, 4, Et_prod_umol_h_m2, PAR, AirT_C) %>%
+  select(1:2, 4, Et_prod_umol_h_m2, PAR, AirT_C, GWC) %>%
   mutate(logEt_prod = log(Et_prod_umol_h_m2+5),
          sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
@@ -997,13 +997,13 @@ emmeans(model_vial.CC, ~ Species*Round)
 #
 # For environmental data, scale data
 Qvial_ARA.CC.BlocSp <- Qvial_ARA.CC %>% select(Round, Block, Species, Et_prod_umol_h_m2)
-Qvial_ARA.CC.value <- Qvial_ARA.CC %>% select(AirT_C, PAR)
+Qvial_ARA.CC.value <- Qvial_ARA.CC %>% select(AirT_C, PAR, GWC)
 Qvial_ARA.CC.scaled <- scale(Qvial_ARA.CC.value)
 Qvial_ARA.CC.scaled <- as.data.frame(Qvial_ARA.CC.scaled)
 Qvial_ARA.CC.scaled <- bind_cols(Qvial_ARA.CC.BlocSp, Qvial_ARA.CC.scaled)
 #
 # glmmTMB with environmental data
-model_vial.CC.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*Species, data=Qvial_ARA.CC.scaled, ziformula=~1, family=gaussian)
+model_vial.CC.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*GWC*Species, data=Qvial_ARA.CC.scaled, ziformula=~1, family=gaussian)
 Anova(model_vial.CC.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
 #
 # mean value per measuring period per species
