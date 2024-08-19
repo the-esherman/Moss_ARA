@@ -913,7 +913,8 @@ Qvial_ARA.field <- Qvial_ARA.field %>%
          cubeEt_prod = Et_prod_umol_h_m2^(1/9),
          sqEt_prod = Et_prod_umol_h_m2^2,
          ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
-         arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))))
+         arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))),
+         AirT_C = AirT_C+273)
 #
 # Graph without 0 values to see distribution with transformation
 Qvial_ARA.field %>%
@@ -944,7 +945,7 @@ Anova(lmeVial, type=2)
 # Model - glmmTMB
 # Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMB package was used
 # Production is square-root transformed
-model_vial <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
+model_vial <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ Round*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
 Anova(model_vial, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model_vial, ~ Species*Round)
 #
