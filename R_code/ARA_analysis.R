@@ -538,10 +538,17 @@ vial_15N.avg <- vial_15N.2 %>%
   
 
 vial_15N.2 %>%
-  ggplot(aes(x = Fixed_N, y = Et_prod_umol_h_m2)) + geom_point() + facet_wrap(~Species)
+  ggplot(aes(x = Fixed_N, y = Et_prod_umol_h_m2)) + geom_point() + facet_wrap(~Species, scales = "free")
 
 vial_15N.2 %>%
   ggplot(aes(x = Species, y = ARA_ratio)) + geom_boxplot()
+
+
+vial_15N.2 %>%
+  ggplot(aes(y = Fixed_N, color = Species)) + geom_boxplot()# + facet_wrap(~Species)
+
+
+
 #
 #
 #------- • Density -------
@@ -706,9 +713,9 @@ Q1_ARA <- Q1_ARA %>%
 #
 # Graph without 0 values to see distribution with transformation
 Q1_ARA %>%
-  filter(Et_prod_umol_h_m2 != 0) %>% # & Et_prod_umol_h_m2 < 10 # Remove zeros (and extreme values)
+  #filter(Et_prod_umol_h_m2 != 0) %>% # & Et_prod_umol_h_m2 < 10 # Remove zeros (and extreme values)
   #  ggplot(aes(x = Round, y = (Et_prod_umol_h_m2))) + geom_point()
-  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram()
+  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram(bins = 1000)
 # Heavily right-skewed, for pretty much all transformations
 # A right-skewed Poisson distribution?
 #
@@ -748,7 +755,7 @@ Q1_ARA %>%
 # -- »»» Seasonality ««« --
 #       ╚═══════════╝
 #
-model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
+model <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ Round*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model, ~ Species*Round)
 #
@@ -759,16 +766,7 @@ emmeans(model, ~ Species*Round)
 model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model2,"Species")
-#
-# For environmental data, scale data
-Q1_ARA.BlocSp <- Q1_ARA %>% select(Round, Block, Species, Et_prod_umol_h_m2)
-Q1_ARA.value <- Q1_ARA %>% select(AirT_C, PAR, Soil_temperature, Soil_moisture)
-Q1_ARA.scaled <- scale(Q1_ARA.value)
-Q1_ARA.scaled <- as.data.frame(Q1_ARA.scaled)
-Q1_ARA.scaled <- bind_cols(Q1_ARA.BlocSp, Q1_ARA.scaled)
-#
-model2.2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*Soil_temperature*Soil_moisture*PAR*Species, data=Q1_ARA.scaled, ziformula=~1, family=gaussian)
-Anova(model2.2, type = c("II"), test.statistic = c("Chi"), component = "cond")
+summary(model2)
 #
 #       ╔═══╗
 # -- »»» BFG ««« --
@@ -949,15 +947,8 @@ model_vial <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ Round*Species, data=Qvial_ARA.fi
 Anova(model_vial, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model_vial, ~ Species*Round)
 #
-# For environmental data, scale data
-Qvial_ARA.field.BlocSp <- Qvial_ARA.field %>% select(Round, Block, Species, Et_prod_umol_h_m2)
-Qvial_ARA.field.value <- Qvial_ARA.field %>% select(AirT_C, PAR, GWC)
-Qvial_ARA.field.scaled <- scale(Qvial_ARA.field.value)
-Qvial_ARA.field.scaled <- as.data.frame(Qvial_ARA.field.scaled)
-Qvial_ARA.field.scaled <- bind_cols(Qvial_ARA.field.BlocSp, Qvial_ARA.field.scaled)
-#
-# glmmTMB with environmental data
-model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*GWC*Species, data=Qvial_ARA.field.scaled, ziformula=~1, family=gaussian)
+# Environmental model
+model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+PAR+GWC)*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
 Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
 #
 # mean value per measuring period per species
@@ -996,16 +987,9 @@ model_vial.CC <- glmmTMB(sqrtEt_prod ~ Round*Species, data=Qvial_ARA.CC, ziformu
 Anova(model_vial.CC, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model_vial.CC, ~ Species*Round)
 #
-# For environmental data, scale data
-Qvial_ARA.CC.BlocSp <- Qvial_ARA.CC %>% select(Round, Block, Species, Et_prod_umol_h_m2)
-Qvial_ARA.CC.value <- Qvial_ARA.CC %>% select(AirT_C, PAR, GWC)
-Qvial_ARA.CC.scaled <- scale(Qvial_ARA.CC.value)
-Qvial_ARA.CC.scaled <- as.data.frame(Qvial_ARA.CC.scaled)
-Qvial_ARA.CC.scaled <- bind_cols(Qvial_ARA.CC.BlocSp, Qvial_ARA.CC.scaled)
-#
-# glmmTMB with environmental data
-model_vial.CC.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ AirT_C*PAR*GWC*Species, data=Qvial_ARA.CC.scaled, ziformula=~1, family=gaussian)
-Anova(model_vial.CC.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
+# Environmental - GWC
+model_vial.gwc <- glmmTMB(sqrtEt_prod ~ GWC*Species, data=Qvial_ARA.CC, ziformula=~1, family=gaussian)
+Anova(model_vial.gwc, type = c("II"), test.statistic = c("Chi"), component = "cond")
 #
 # mean value per measuring period per species
 vial.CC.means <- summarySE(data = Qvial_ARA.CC, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
@@ -1084,6 +1068,11 @@ field_ARA_wide.5 %>%
   
 
 vial_ARA_field %>%
+  ggplot() +
+  geom_boxplot(aes(y = Et_prod_umol_h_m2, x = Round)) +
+  facet_wrap(~Species, scales = "free")
+
+vial_ARA_climateChamber %>%
   ggplot() +
   geom_boxplot(aes(y = Et_prod_umol_h_m2, x = Round)) +
   facet_wrap(~Species, scales = "free")
