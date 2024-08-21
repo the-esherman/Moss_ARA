@@ -1012,7 +1012,65 @@ EM50_Heath %>%
 #
 #
 #-------  ♪   ARA           ♪ -------
+#
+# Combine the important features of chambers and vials
+# Ethylene production only
+# Field chamber
+field.basic <- field_ARA_wide.5 %>%
+  select(Block, Species, Round, Month, Habitat, BFG, Et_prod_umol_h_m2) %>%
+  rename("Et_prod_field" = Et_prod_umol_h_m2)
+#
+# Vials in the field
+vial_field.basic <- vial_ARA_field %>%
+  select(Block, Species, Round, Et_prod_umol_h_m2) %>%
+  rename("Et_prod_vial.Field" = Et_prod_umol_h_m2)
+#
+# Vials in the climate chamber
+vial_cc.basic <- vial_ARA_climateChamber  %>%
+  select(Block, Species, Round, Et_prod_umol_h_m2) %>%
+  rename("Et_prod_vial.CC" = Et_prod_umol_h_m2) %>%
+  mutate(Round = case_when(Round == "A5" ~ "A",
+                           Round == "B5" ~ "B",
+                           Round == "C5" ~ "C"))
+#
+# Combine vial results
+vial.basic <- left_join(vial_field.basic, vial_cc.basic, by = join_by(Block, Species, Round)) %>%
+  mutate(Round = case_when(Round == "A" ~ 4,
+                           Round == "B" ~ 5,
+                           Round == "C" ~ 8))
+#
+# Combine field measurements and vial measurements
+ARA_all.basic <- left_join(field.basic, vial.basic, by = join_by(Block, Species, Round))
+#
+# Filter down to vial data points
+ARA_vialRound.basic <- ARA_all.basic %>%
+  filter(Round == 4 | Round == 5 | Round == 8)
+#
+# Export dataset
+#write_csv(ARA_vialRound.basic, "export/ARA_field_and_vial.csv")
+#
+ARA_vialRound.basic %>%
+  ggplot(aes(x = Et_prod_field, y = Et_prod_vial.Field)) +
+  geom_point() +
+  facet_wrap(~Species, scales = "free")
+#
+ARA_vialRound.basic %>%
+  ggplot(aes(x = Et_prod_vial.Field, y = Et_prod_vial.CC)) +
+  geom_point() +
+  facet_wrap(~Species, scales = "free")
 
+
+
+
+
+
+#
+#
+#      ╔════════════════╗
+# -- ♪ ♪ Field chambers ♪ ♪ --
+#      ╚════════════════╝
+#
+# A grayscale graph
 field_ARA_wide.5 %>%
   mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
                              Species == "Di" ~ "Dicranum scoparium",
@@ -1031,11 +1089,11 @@ field_ARA_wide.5 %>%
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro), color = "black") + 
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Moss ethylene production")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Bryophyte ethylene production")) + 
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 
-
+# Same graph as before, but with functional groups coloured in
 field_ARA_wide.5 %>%
   mutate(Sp = Species,
          Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
@@ -1062,10 +1120,50 @@ field_ARA_wide.5 %>%
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Moss ethylene production")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Bryophyte ethylene production")) + 
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-  
+
+
+#
+#      ╔═══════╗
+# -- ♪ ♪ Vials ♪ ♪ --
+#      ╚═══════╝
+#
+# Vials in the field
+ARA_vialRound.basic %>%
+  mutate(Sp = Species,
+         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+                             Species == "Di" ~ "Dicranum scoparium",
+                             Species == "Hy" ~ "Hylocomium splendens",
+                             Species == "Pl" ~ "Pleurozium schreberi",
+                             Species == "Po" ~ "Polytrichum commune",
+                             Species == "Pti" ~ "Ptilidium ciliare",
+                             Species == "Ra" ~ "Racomitrium lanuginosum",
+                             Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species),
+         Month = case_when(Month == "Feb21" ~ "February",
+                           Month == "Mar21" ~ "March",
+                           Month == "Jul21" ~ "July")) %>%
+  mutate(across(Month, ~ factor(.x, levels=c("February", "March", "July")))) %>%
+  summarise(meanEt_pro = mean(Et_prod_vial.Field, na.rm = TRUE), se = sd(Et_prod_vial.Field)/sqrt(length(Et_prod_vial.Field)), .by = c(Month, Species, Sp)) %>%
+  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
+                         Sp == "Di" ~ "Tall unbranched turf",
+                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
+                         Sp == "Po" ~ "Polytrichales",
+                         Sp == "Pti" ~ "Leafy liverwort",
+                         Sp == "Ra" ~ "Large cushion",
+                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
+  ggplot() +
+  geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
+  geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
+  facet_wrap(~Species, scales = "free", ncol = 5) +
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Bryophyte ethylene production in vials")) + 
+  theme_classic(base_size = 15) +
+  theme(panel.spacing = unit(2, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
+
 
 vial_ARA_field %>%
   ggplot() +
@@ -1074,7 +1172,7 @@ vial_ARA_field %>%
 
 vial_ARA_climateChamber %>%
   ggplot() +
-  geom_boxplot(aes(y = Et_prod_umol_h_m2, x = Round)) +
+  geom_point(aes(y = Et_prod_umol_h_m2, x = Round)) +
   facet_wrap(~Species, scales = "free")
 
 
