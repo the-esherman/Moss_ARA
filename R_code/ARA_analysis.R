@@ -1185,7 +1185,23 @@ vial_ARA_field %>%
 #
 #
 #-------  ♪   N2 fixation   ♪ -------
-
+#
+# Regression plot of N2-fixation and ethylene production 
+# Only for ethylene production values greater than 0
+# The only species that had positive ethylene production were the three sphagnum species
+vial_15N.2 %>%
+  filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
+  mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species)) %>% 
+  ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  facet_wrap(~Species) +
+  labs(x = expression("Fixed nitrogen ("*N[2]~~h^-1~m^2*")"), y = expression("Ethylene production ( "*C[2]*H[4]~~h^-1~m^2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
+  theme_classic(base_size = 15) +
+  theme(panel.spacing = unit(1, "lines"))
 #
 #
 #
