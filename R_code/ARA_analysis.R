@@ -784,15 +784,11 @@ emmeans(model3,"BFG")
 # Heath
 modelHeath <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA[Q1_ARA$Habitat=="H",], ziformula=~1, family=gaussian)
 Anova(modelHeath, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ       DF    p
-# 110.15  10  < 2.2e-16 
 emmeans(modelHeath,"Species")
 #
 # Mire
 modelMire <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA[Q1_ARA$Habitat=="M",], ziformula=~1, family=gaussian)
 Anova(modelMire, type = c("II"), test.statistic = c("Chi"), component = "cond")
-# χ       DF    p
-# 110.15  10  < 2.2e-16 
 emmeans(modelMire,"Species")
 #
 #       ╔════════════════════════════╗
@@ -1275,7 +1271,7 @@ plot_grid(et_plot_grid, chambervsVialcc_legend, ncol = 1, rel_heights = c(15,1))
 # Regression plot of N2-fixation and ethylene production 
 # Only for ethylene production values greater than 0
 # The only species that had positive ethylene production were the three sphagnum species
-vial_15N.2 %>%
+x<- vial_15N.2 %>%
   filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
   mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum flexuosum",
@@ -1284,7 +1280,7 @@ vial_15N.2 %>%
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE) +
-  facet_wrap(~Species) +
+  #facet_wrap(~Species) +
   labs(x = expression("Fixed nitrogen ("*N[2]~~h^-1~m^2*")"), y = expression("Ethylene production ( "*C[2]*H[4]~~h^-1~m^2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"))
