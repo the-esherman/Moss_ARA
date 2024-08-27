@@ -566,7 +566,7 @@ densityCount <- densityCount %>%
   ungroup()
 #
 # Average
-densityCount.2 <- densityCount %>%
+densityCount.avg <- densityCount %>%
   summarise(density = mean(density, na.rm = TRUE), .by = Species)
 #
 #
