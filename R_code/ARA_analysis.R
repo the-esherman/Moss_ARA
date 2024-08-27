@@ -884,13 +884,6 @@ ARAmeans <- summarySE(data = Q1_ARA, measurevar = "Et_prod_umol_h_m2", groupvars
 #
 #
 #
-#-------  »   Q2            « -------
-# 2.	How do the different bryophyte functional groups differ their N2-fixation potential through the year of the Arctic?
-#
-
-#
-#
-#
 #-------  »   Vial          « -------
 #
 # As with the field data, but done for the three rounds
