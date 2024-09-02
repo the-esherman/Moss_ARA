@@ -1012,8 +1012,8 @@ vial.CC.means <- summarySE(data = Qvial_ARA.CC, measurevar = "Et_prod_umol_h_m2"
 #
 #=======  ♫♫  Graphs        ♫♫ =======
 #-------  ♪   Environmental ♪ -------
-
-
+#
+# Moisture from three different loggers
 EM50_Heath %>%
   ggplot() +
   geom_point(aes(x = Date_time, y = Soil_moisture_B), colour = "#0072B2") +
@@ -1021,7 +1021,33 @@ EM50_Heath %>%
   geom_point(aes(x = Date_time, y = Soil_moisture_R), colour = "#D55E00") +
   #geom_point(aes(x = Date_time, y = Soil_moisture_W), colour = "#009E73") +
   geom_point(aes(x = Date_time, y = Soil_moisture_Y), colour = "#F0E442")
-
+#
+# GWC graph
+vial_ARA_field %>%
+  mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+                             Species == "Di" ~ "Dicranum scoparium",
+                             Species == "Hy" ~ "Hylocomium splendens",
+                             Species == "Pl" ~ "Pleurozium schreberi",
+                             Species == "Po" ~ "Polytrichum commune",
+                             Species == "Pti" ~ "Ptilidium ciliare",
+                             Species == "Ra" ~ "Racomitrium lanuginosum",
+                             Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species),
+         GWC = GWC*100,
+         Month = case_when(Round == "A" ~ "February",
+                           Round == "B" ~ "March",
+                           Round == "C" ~ "July")) %>%
+  mutate(across(Month, ~ factor(.x, levels=c("February", "March", "July")))) %>%
+  summarise(meanGWC = mean(GWC, na.rm = TRUE), se = sd(GWC)/sqrt(length(GWC)), .by = c(Month, Species)) %>%
+  ggplot() +
+  geom_errorbar(aes(x = Month, y = meanGWC, ymin=meanGWC, ymax=meanGWC+se), position=position_dodge(.9)) +
+  geom_col(aes(x = Month, y = meanGWC), color = "black") + 
+  facet_wrap(~Species, scales = "free", ncol = 5) +
+  labs(x = "Measuring period (Month)", y = expression("Gravimetric water content (GWC, % "*DW^-1*")"), title = expression("Bryophyte water content")) + 
+  theme_classic(base_size = 15) +
+  theme(panel.spacing = unit(1, "lines"))
 #
 #
 #
