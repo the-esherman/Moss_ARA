@@ -768,10 +768,15 @@ emmeans(model, ~ Species*Round)
 # -- »»» Environmental drivers ««« --
 #       ╚═════════════════════╝
 #
-model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species, data=Q1_ARA, ziformula=~1, family=gaussian)
+model2 <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ Species*(Soil_temperature+Soil_moisture+PAR+AirT_C), data=Q1_ARA, ziformula=~1, family=gaussian)
 Anova(model2, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(model2,"Species")
 summary(model2)
+#
+plot(residuals(model2)) # best for zero inflated
+qqnorm(residuals(model2))
+qqline(residuals(model2), col = 2)
+plotmo::plotres(model2) # Bad for zero inflated models
 #
 #       ╔═══╗
 # -- »»» BFG ««« --
@@ -790,10 +795,14 @@ modelHeath <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_mo
 Anova(modelHeath, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(modelHeath,"Species")
 #
+plot(residuals(modelHeath))
+#
 # Mire
 modelMire <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+Soil_temperature+Soil_moisture+PAR)*Species ,data=Q1_ARA[Q1_ARA$Habitat=="M",], ziformula=~1, family=gaussian)
 Anova(modelMire, type = c("II"), test.statistic = c("Chi"), component = "cond")
 emmeans(modelMire,"Species")
+#
+plot(residuals(modelMire))
 #
 #       ╔════════════════════════════╗
 # -- »»» Model on a per species level ««« --
@@ -906,7 +915,8 @@ Qvial_ARA.field <- Qvial_ARA.field %>%
          sqEt_prod = Et_prod_umol_h_m2^2,
          ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
          arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))),
-         AirT_C = AirT_C+273)
+         AirT_C = AirT_C+273,
+         GWC = GWC*100)
 #
 # Graph without 0 values to see distribution with transformation
 Qvial_ARA.field %>%
@@ -939,14 +949,24 @@ Anova(lmeVial, type=2)
 # Production is square-root transformed
 model_vial <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ Round*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
 Anova(model_vial, type = c("II"), test.statistic = c("Chi"), component = "cond")
-emmeans(model_vial, ~ Species*Round)
+#
+plot(residuals(model_vial))
+qqnorm(residuals(model_vial))
+qqline(residuals(model_vial), col = 2)
+#
 #
 # Environmental model
 model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+PAR+GWC)*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
 Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
 #
+# residuals
+qqnorm(residuals(model_vial.env))
+qqline(residuals(model_vial.env), col = 2)
+plot(residuals(model_vial.env))
+#
 # mean value per measuring period per species
 vial.field.means <- summarySE(data = Qvial_ARA.field, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
+vial.GWC.means <- summarySE(data = Qvial_ARA.field, measurevar = "GWC", groupvars = c("Species", "Round"))
 #
 #
 #       ╔═════════════════════╗
