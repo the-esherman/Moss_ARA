@@ -1113,7 +1113,7 @@ field_ARA_wide.5 %>%
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro), color = "black") + 
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Bryophyte ethylene production")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -1144,7 +1144,7 @@ field_ARA_wide.5 %>%
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Bryophyte ethylene production")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -1183,7 +1183,7 @@ ARA_vialRound.basic %>%
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
   facet_wrap(~Species, scales = "free", ncol = 5) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (Ethylene  "*h^-1*" "*m^2*")"), title = expression("Bryophyte ethylene production in vials")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials")) + 
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
 
@@ -1233,7 +1233,7 @@ vialvsVial_plot <- ARA_vialRound.basic %>%
   scale_color_viridis_d() +
   geom_smooth(method = lm, se = FALSE) +
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = expression("Vial in the field ( "*C[2]*H[4]~~h^-1~m^2*")"), y = expression("Vial in the climate chamber ( "*C[2]*H[4]~~h^-1~m^2*")"), title = "Vial (field) vs vial (climate chamber)") +
+  labs(x = expression("Vial in the field (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), y = expression("Vial in the climate chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = "Vial (field) vs vial (climate chamber)") +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"), legend.position = "none")
 #
@@ -1258,7 +1258,7 @@ chambervsVialfield_plot <- ARA_vialRound.basic %>%
   scale_color_viridis_d() +
   geom_smooth(method = lm, se = FALSE) +
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = expression("Field chamber ( "*C[2]*H[4]~~h^-1~m^2*")"), y = expression("Vial in the field ( "*C[2]*H[4]~~h^-1~m^2*")"), title = "Field chamber vs vial (field)") +
+  labs(x = expression("Field chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), y = expression("Vial in the field (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = "Field chamber vs vial (field)") +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"), legend.position = "none")
 #
@@ -1283,7 +1283,7 @@ chambervsVialcc_plot <- ARA_vialRound.basic %>%
   scale_color_viridis_d() +
   geom_smooth(method = lm, se = FALSE) +
   facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = expression("Field chamber ( "*C[2]*H[4]~~h^-1~m^2*")"), y = expression("Vial in the climate chamber ( "*C[2]*H[4]~~h^-1~m^2*")"), title = "Field chamber vs vial (climate chamber)") +
+  labs(x = expression("Field chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), y = expression("Vial in the climate chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = "Field chamber vs vial (climate chamber)") +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"), legend.position = "bottom")
 #
@@ -1314,7 +1314,7 @@ plot_grid(et_plot_grid, chambervsVialcc_legend, ncol = 1, rel_heights = c(15,1))
 # Regression plot of N2-fixation and ethylene production 
 # Only for ethylene production values greater than 0
 # The only species that had positive ethylene production were the three sphagnum species
-x<- vial_15N.2 %>%
+vial_15N.2 %>%
   filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
   mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum flexuosum",
@@ -1324,7 +1324,7 @@ x<- vial_15N.2 %>%
   geom_point() +
   geom_smooth(method = lm, se = FALSE) +
   #facet_wrap(~Species) +
-  labs(x = expression("Fixed nitrogen ("*N[2]~~h^-1~m^2*")"), y = expression("Ethylene production ( "*C[2]*H[4]~~h^-1~m^2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
+  labs(x = expression("Fixed nitrogen (µg "*N[2]~~h^-1~m^-2*")"), y = expression("Ethylene production (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"))
 #
