@@ -34,7 +34,7 @@ field_ARA <- read_csv("Data_clean/field_ARA.csv", col_names = TRUE)
 #
 # Bryophyte density count
 densityCount <- read_xlsx("Data_raw/Moss counts.xlsx")
-densityArea <- (2.2/2)^2*pi/10000 # Area of one sample for density count in m2
+densityArea <- (2.2/2)^2*pi # Area of one sample for density count in cm2
 #
 # The small corers that were used for density and for selecting vial samples:
 # Inner diameter: 2.2cm
