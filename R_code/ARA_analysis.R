@@ -571,20 +571,7 @@ vial_15N.avg <- vial_15N.2 %>%
             N_h_m2 = mean(N_h_m2, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N)
-  
-
-vial_15N.2 %>%
-  ggplot(aes(x = Fixed_N, y = Et_prod_umol_h_m2)) + geom_point() + facet_wrap(~Species, scales = "free")
-
-vial_15N.2 %>%
-  ggplot(aes(x = Species, y = ARA_ratio)) + geom_boxplot()
-
-
-vial_15N.2 %>%
-  ggplot(aes(y = Fixed_N, color = Species)) + geom_boxplot()# + facet_wrap(~Species)
-
-
-
+#
 #
 #
 #------- • Density -------
