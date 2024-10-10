@@ -137,8 +137,10 @@ AirT_wetland.1 <- AirT_wetland %>%
   select(Date, Time, AirT_C) %>%
   rename("Tid" = Time)
 #
-# Soil temperature, moisture, and PAR are based on Heathland measurements
+# EM50 loggers
 # Values are averaged across the five blocks for soil temperature and moisture and moisture is converted to per cent.
+#
+# Soil temperature, moisture and PAR from heath
 EM50_Heath.1 <- EM50_Heath %>%
   rowwise() %>%
   mutate(Soil_moisture = mean(c(Soil_moisture_B, Soil_moisture_P, Soil_moisture_R, Soil_moisture_W, Soil_moisture_Y, Soil_moisture_G), na.rm = TRUE),
@@ -148,31 +150,29 @@ EM50_Heath.1 <- EM50_Heath %>%
   select(Date_time, Soil_moisture, Soil_temperature, PAR) %>%
   separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time"), too_few = "debug", too_many = "debug") %>%
   mutate(Date = ymd(Date),
-         Tid = hms::as_hms(Time)) 
-#
-EM50_Heath.2 <- EM50_Heath.1 %>%
+         Tid = hms::as_hms(Time)) %>%
   select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
   filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
 #
-# Save data
-# write_csv(EM50_Heath.2, "Data_clean/Heath_EM50_simple.csv")
 #
 # Soil temperature, moisture and PAR from wetland
-# Values are averaged across the five blocks for soil temperature and moisture and moisture is converted to per cent.
 EM50_Wetland.1 <- EM50_Wetland %>%
   rowwise() %>%
-  mutate(Soil_moisture = mean(c(Soil_moisture_B, Soil_moisture_P, Soil_moisture_R, Soil_moisture_W, Soil_moisture_Y, Soil_moisture_G), na.rm = TRUE),
-         Soil_temperature = mean(c(Soil_temperature_B, Soil_temperature_P, Soil_temperature_R, Soil_temperature_W, Soil_temperature_Y, Soil_temperature_G), na.rm = TRUE)) %>%
-  mutate(Soil_moisture = Soil_moisture*100) %>%
+  mutate(Soil_moisture_Mwet = mean(c(Soil_moisture_Bwet, Soil_moisture_Pwet, Soil_moisture_Wwet, Soil_moisture_Ywet), na.rm = TRUE),
+         Soil_temperature_Mwet = mean(c(Soil_temperature_Bwet, Soil_temperature_Pwet, Soil_temperature_Wwet, Soil_temperature_Ywet), na.rm = TRUE),
+         Soil_moisture_M = mean(c(Soil_moisture_B, Soil_moisture_P, Soil_moisture_R, Soil_moisture_W, Soil_moisture_Y, Soil_moisture_G), na.rm = TRUE),
+         Soil_temperature_M = mean(c(Soil_temperature_B, Soil_temperature_P, Soil_temperature_R, Soil_temperature_W, Soil_temperature_Y, Soil_temperature_G), na.rm = TRUE)) %>%
+  mutate(Soil_moisture_M = Soil_moisture_M*100,
+         Soil_moisture_Mwet = Soil_moisture_Mwet*100) %>%
   ungroup() %>%
-  select(Date_time, Soil_moisture, Soil_temperature, PAR) %>%
+  select(Date_time, Soil_moisture_Mwet, Soil_temperature_Mwet, Soil_moisture_M, Soil_temperature_M, PAR) %>%
   separate_wider_delim(Date_time, delim = " ", names = c("Date", "Time"), too_few = "debug", too_many = "debug") %>%
   mutate(Date = ymd(Date),
-         Tid = hms::as_hms(Time)) 
+         Tid = hms::as_hms(Time)) %>%
+  select(Date, Tid, Soil_moisture_Mwet, Soil_temperature_Mwet, Soil_moisture_M, Soil_temperature_M, PAR) %>%
+  rename("PAR_M" = PAR) %>%
+  filter(!is.na(Soil_moisture_M) & !is.na(Soil_temperature_M))
 #
-EM50_Wetland.2 <- EM50_Wetland.1 %>%
-  select(Date, Tid, Soil_moisture, Soil_temperature, PAR) %>%
-  filter(!is.na(Soil_moisture) & !is.na(Soil_temperature))
 #
 #    ╔═══════════════════════════════╗
 # -- • Climate chamber environmental • --
@@ -183,7 +183,8 @@ EM50_Wetland.2 <- EM50_Wetland.1 %>%
 PAR_CC <- PAR_CC %>%
   separate_wider_delim(Date_time, delim = " ", names = c("Date", "Tid")) %>%
   mutate(Date = ymd(Date),
-         Tid = hms::as_hms(Tid))
+         Tid = hms::as_hms(Tid)) %>%
+  rename("PAR.cc" = PAR)
 #
 # Air temperature
 # Use vial measurements
@@ -192,7 +193,7 @@ AirT_CC <- AirT_CC %>%
   filter(location == "vial") %>%
   select(Date, Time, AirT_C) %>%
   group_by(Date, Time) %>%
-  summarise(AirT_C = mean(AirT_C, na.rm = T)) %>%
+  summarise(AirT_C.cc = mean(AirT_C, na.rm = T)) %>%
   ungroup() %>%
   rename("Tid" = Time)
 #
@@ -240,22 +241,44 @@ field_ARA.period <- field_ARA.2 %>%
   select(Round, Date, Start, End) %>%
   distinct(Round, Date, Start, End, .keep_all = TRUE)
 #
+# Combine loggers from site
 # Environmental data averaged over the time of measurement for each day when measurements were done
-field_environ <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
+field_environ <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1), full_join, by = join_by(Date, Tid)) %>%
+  # Introduce DST, as it was used in the field measurements
+  # The fine-details of exactly hour when it shifts does not matter, as no measurements were done from 2-3 am when the time shifts
+  mutate(Tid = case_when(Date < ymd("20201025") ~ Tid+hms::hms(3600),
+                          Date == ymd("20201025") & Tid < hms::hms(3*3600) ~ Tid+hms::hms(3600),
+                          Date > ymd("20210328") & Date < ymd("20211031") ~ Tid+hms::hms(3600),
+                          Date > ymd("20220327") ~ Tid+hms::hms(3600),
+                          TRUE ~ Tid)) %>%
   left_join(field_ARA.period, by = join_by(Date)) %>%
   filter(!is.na(Round)) %>%
   group_by(Date) %>%
   filter(Tid >= Start & Tid <= End) %>%
-  summarise(Soil_moisture = mean(Soil_moisture),
-            Soil_temperature = mean(Soil_temperature),
-            PAR = mean(PAR),
-            AirT_C = mean(AirT_C)) %>%
+  summarise(SoilT_Mwet = mean(Soil_temperature_Mwet, na.rm = T),
+            SoilM_Mwet = mean(Soil_moisture_Mwet, na.rm = T),
+            SoilT_M = mean(Soil_temperature_M, na.rm = T),
+            SoilM_M = mean(Soil_moisture_M, na.rm = T),
+            PAR_M = mean(PAR_M, na.rm = T),
+            SoilT = mean(Soil_temperature, na.rm = T),
+            SoilM = mean(Soil_moisture, na.rm = T),
+            AirT_C = mean(AirT_C, na.rm = T),
+            PAR = mean(PAR, na.rm = T)) %>%
   ungroup()
 #
 # Reduce to an environmental value for each Species per block per round
 # Combine with the big dataset first to connect date with block, species and round
 field_environ.2 <- field_ARA.2 %>%
   left_join(field_environ, by = join_by(Date)) %>%
+  # Reduce Soil moisture and temperature to one value, by per species
+  mutate(PAR = case_when(Species == "S" | Species == "Sf" | Species == "Sli" ~ PAR_M,
+                         TRUE ~ PAR),
+         Soil_temperature = case_when(Species == "Sli" ~ SoilT_Mwet,
+                           Species == "Sf" | Species == "S" ~ SoilT_M,
+                           TRUE ~ SoilT),
+         Soil_moisture = case_when(Species == "Sli" ~ SoilM_Mwet,
+                           Species == "Sf" | Species == "S" ~ SoilM_M,
+                           TRUE ~ SoilM)) %>%
   select(Block, Species, Round, Soil_moisture, Soil_temperature, PAR, AirT_C) %>%
   distinct(Block, Species, Round, Soil_moisture, Soil_temperature, PAR, AirT_C, .keep_all = T)
 #
@@ -449,18 +472,24 @@ vial_ARA.period <- vial_ARA.2 %>%
                               TRUE ~ Round))
 #
 # Average environmental data for the time period
-environ_vial <- left_join(EM50_Heath.2, AirT_wetland.1, by = join_by(Date, Tid)) %>%
-  left_join(PAR_CC, by = join_by(Date, Tid)) %>%
-  left_join(AirT_CC, by = join_by(Date, Tid)) %>%
+environ_vial <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1, PAR_CC, AirT_CC), full_join, by = join_by(Date, Tid)) %>%
+  # Introduce DST, as it was used in the field measurements
+  # The fine-details of exactly hour when it shifts does not matter, as no measurements were done from 2-3 am when the time shifts
+  mutate(Tid = case_when(Date < ymd("20201025") ~ Tid+hms::hms(3600),
+                         Date == ymd("20201025") & Tid < hms::hms(3*3600) ~ Tid+hms::hms(3600),
+                         Date > ymd("20210328") & Date < ymd("20211031") ~ Tid+hms::hms(3600),
+                         Date > ymd("20220327") ~ Tid+hms::hms(3600),
+                         TRUE ~ Tid)) %>%
   left_join(vial_ARA.period, by = join_by(Date), multiple = "all") %>%
   filter(!is.na(Round)) %>%
   mutate(Date_time = ymd(Date) + hms(Tid)) %>%
   group_by(Roundsub) %>%
   filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
-  summarise(PAR.field = mean(PAR.x, na.rm = T),
-            AirT_C.field = mean(AirT_C.x, na.rm = T),
-            PAR.cc = mean(PAR.y, na.rm = T),
-            AirT_C.cc = mean(AirT_C.y, na.rm = T)) %>%
+  summarise(PAR.field = mean(PAR, na.rm = T),
+            PAR_M = mean(PAR_M, na.rm = T),
+            AirT_C.field = mean(AirT_C, na.rm = T),
+            PAR.cc = mean(PAR.cc, na.rm = T),
+            AirT_C.cc = mean(AirT_C.cc, na.rm = T)) %>%
   ungroup() %>%
   mutate(PAR = if_else(str_detect(Roundsub, "5"), PAR.cc, PAR.field),
          AirT_C = if_else(str_detect(Roundsub, "5"), AirT_C.cc, AirT_C.field)) %>%
@@ -483,6 +512,8 @@ vial_ARA.3 <- vial_ARA.2 %>%
                               TRUE ~ Round)) %>%
   relocate(Roundsub, .after = Round) %>%
   left_join(environ_vial, by = join_by(Roundsub)) %>%
+  mutate(PAR = if_else(Species == "S" | Species == "Sf" | Species == "Sli", PAR_M, PAR)) %>%
+  select(!PAR_M) %>%
   mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * (AirT_C+273)) / Vial_area_m2) %>%
   # Ethylene production is either greater than 0 or 0. No negative values
   mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
