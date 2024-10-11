@@ -42,6 +42,7 @@ densityArea <- (2.2/2)^2*pi # Area of one sample for density count in cm2
 #
 # Air temperature
 AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
+AirT_heath <- read_csv("Data_clean/AirT_heath.csv", col_names = TRUE)
 #
 # Soil parameters
 EM50_Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
@@ -136,6 +137,12 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 AirT_wetland.1 <- AirT_wetland %>%
   select(Date, Time, AirT_C) %>%
   rename("Tid" = Time)
+#
+# Heath for climate chamber
+AirT_heath.1 <- AirT_heath %>%
+  select(Date, Time, AirT_C) %>%
+  rename("Tid" = Time,
+         "AirT_h" = AirT_C)
 #
 # EM50 loggers
 # Values are averaged across the five blocks for soil temperature and moisture and moisture is converted to per cent.
@@ -472,7 +479,7 @@ vial_ARA.period <- vial_ARA.2 %>%
                               TRUE ~ Round))
 #
 # Average environmental data for the time period
-environ_vial <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1, PAR_CC, AirT_CC), full_join, by = join_by(Date, Tid)) %>%
+environ_vial <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1, AirT_heath.1), full_join, by = join_by(Date, Tid)) %>%
   # Introduce DST, as it was used in the field measurements
   # The fine-details of exactly hour when it shifts does not matter, as no measurements were done from 2-3 am when the time shifts
   mutate(Tid = case_when(Date < ymd("20201025") ~ Tid+hms::hms(3600),
@@ -480,6 +487,9 @@ environ_vial <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1, PAR_CC
                          Date > ymd("20210328") & Date < ymd("20211031") ~ Tid+hms::hms(3600),
                          Date > ymd("20220327") ~ Tid+hms::hms(3600),
                          TRUE ~ Tid)) %>%
+  mutate(AirT_h = if_else(is.na(AirT_h), AirT_C, AirT_h)) %>% # As the last couple of heathland tinytags were not logged, use air temperature from wetland
+  left_join(PAR_CC, by = join_by(Date, Tid)) %>%
+  left_join(AirT_CC, by = join_by(Date, Tid)) %>%
   left_join(vial_ARA.period, by = join_by(Date), multiple = "all") %>%
   filter(!is.na(Round)) %>%
   mutate(Date_time = ymd(Date) + hms(Tid)) %>%
@@ -487,6 +497,7 @@ environ_vial <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1, PAR_CC
   filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
   summarise(PAR.field = mean(PAR, na.rm = T),
             PAR_M = mean(PAR_M, na.rm = T),
+            AirT_h = mean(AirT_h, na.rm = T),
             AirT_C.field = mean(AirT_C, na.rm = T),
             PAR.cc = mean(PAR.cc, na.rm = T),
             AirT_C.cc = mean(AirT_C.cc, na.rm = T)) %>%
@@ -512,8 +523,9 @@ vial_ARA.3 <- vial_ARA.2 %>%
                               TRUE ~ Round)) %>%
   relocate(Roundsub, .after = Round) %>%
   left_join(environ_vial, by = join_by(Roundsub)) %>%
-  mutate(PAR = if_else(Species == "S" | Species == "Sf" | Species == "Sli", PAR_M, PAR)) %>%
-  select(!PAR_M) %>%
+  mutate(PAR = if_else(Species == "S" | Species == "Sf" | Species == "Sli", PAR_M, PAR),
+         AirT_C = if_else(Species == "S" | Species == "Sf" | Species == "Sli", AirT_C, AirT_h)) %>%
+  select(!c(PAR_M, AirT_h)) %>%
   mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * (AirT_C+273)) / Vial_area_m2) %>%
   # Ethylene production is either greater than 0 or 0. No negative values
   mutate(Et_prod_umol_h_m2 = if_else(Et_prod_umol_h_m2 < 0, 0, Et_prod_umol_h_m2))
@@ -974,7 +986,7 @@ qqline(residuals(model_vial), col = 2)
 #
 #
 # Environmental model
-model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (AirT_C+PAR+GWC)*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
+model_vial.env <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ (PAR+GWC)*Species, data=Qvial_ARA.field, ziformula=~1, family=gaussian)
 Anova(model_vial.env, type = c("II"), test.statistic = c("Chi"), component = "cond")
 #
 # residuals
