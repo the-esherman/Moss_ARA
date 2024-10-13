@@ -1062,7 +1062,7 @@ vial_ARA_field %>%
                              Species == "Pti" ~ "Ptilidium ciliare",
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species),
          GWC = GWC*100,
@@ -1134,7 +1134,7 @@ field_ARA_wide.5 %>%
                              Species == "Pti" ~ "Ptilidium ciliare",
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species)) %>%
   mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
@@ -1158,7 +1158,7 @@ field_ARA_wide.5 %>%
                              Species == "Pti" ~ "Ptilidium ciliare",
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species)) %>%
   mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
@@ -1179,58 +1179,6 @@ field_ARA_wide.5 %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-# Plot Environmental drivers with AR
-#
-# Select necessary columns
-field_ARA.plot <- field_ARA_wide.5 %>%
-  select(Block:BFG, Soil_moisture:AirT_C, Et_prod_umol_h_m2) %>%
-  mutate(Sp = Species,
-         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
-                             Species == "Di" ~ "Dicranum scoparium",
-                             Species == "Hy" ~ "Hylocomium splendens",
-                             Species == "Pl" ~ "Pleurozium schreberi",
-                             Species == "Po" ~ "Polytrichum commune",
-                             Species == "Pti" ~ "Ptilidium ciliare",
-                             Species == "Ra" ~ "Racomitrium lanuginosum",
-                             Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
-                             Species == "S" ~ "S. ???",
-                             TRUE ~ Species)) %>%
-  mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21"))))
-#
-# Format long
-field_ARA.plot.long <- field_ARA.plot %>%
-  pivot_longer(cols = Soil_moisture:AirT_C, names_to = "Driver", values_to = "Environmental")
-#
-# Species together
-field_ARA.plot.long %>%
-  filter(Sp != "Sli") %>%
-  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature (°C)",
-                            Driver == "Soil_moisture" ~ "Soil moisture (VWC, %)",
-                            Driver == "Soil_temperature" ~ "Soil temperature (°C)",
-                            Driver == "PAR" ~ "PAR (µmol pr m² pr s)",
-                            TRUE ~ Driver)) %>%
-  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
-  #geom_smooth(method = "lm", se = FALSE, color = "black") +
-  geom_point(aes(color = Month, shape = Species)) +
-  scale_shape_manual(values = 1:10) +
-  facet_wrap(~Driver, ncol = 2, scales = "free") +
-  labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR") +
-  theme_classic()
-#
-# For each species separately
-field_ARA.plot.long %>%
-  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature",
-                            Driver == "Soil_moisture" ~ "Soil moisture",
-                            Driver == "Soil_temperature" ~ "Soil temperature",
-                            TRUE ~ Driver)) %>%
-  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
-  geom_smooth(method = "lm", se = TRUE, color = "black") +
-  geom_point(aes(color = Month)) +
-  ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all") +
-  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte GPP") +
-  theme_bw()
-#
 #
 #      ╔═══════╗
 # -- ♪ ♪ Vials ♪ ♪ --
@@ -1247,7 +1195,7 @@ ARA_vialRound.basic %>%
                              Species == "Pti" ~ "Ptilidium ciliare",
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species),
          Month = case_when(Month == "Feb21" ~ "February",
@@ -1305,7 +1253,7 @@ vialvsVial_plot <- ARA_vialRound.basic %>%
                              Species == "Pti" ~ "Ptilidium ciliare",
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species),
          Month = case_when(Month == "Feb21" ~ "February",
@@ -1330,7 +1278,7 @@ chambervsVialfield_plot <- ARA_vialRound.basic %>%
                              Species == "Pti" ~ "Ptilidium ciliare",
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species),
          Month = case_when(Month == "Feb21" ~ "February",
@@ -1355,7 +1303,7 @@ chambervsVialcc_plot <- ARA_vialRound.basic %>%
                              Species == "Pti" ~ "Ptilidium ciliare",
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species),
          Month = case_when(Month == "Feb21" ~ "February",
@@ -1392,6 +1340,67 @@ plot_grid(et_plot_grid, chambervsVialcc_legend, ncol = 1, rel_heights = c(15,1))
 #
 #
 #
+#-------  ♪   ARA & drivers ♪ -------
+#
+# Plot Environmental drivers with AR
+#
+# In situ chambers
+#
+# Select necessary columns
+field_ARA.plot <- field_ARA_wide.5 %>%
+  select(Block:BFG, Soil_moisture:AirT_C, Et_prod_umol_h_m2) %>%
+  mutate(Sp = Species,
+         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+                             Species == "Di" ~ "Dicranum scoparium",
+                             Species == "Hy" ~ "Hylocomium splendens",
+                             Species == "Pl" ~ "Pleurozium schreberi",
+                             Species == "Po" ~ "Polytrichum commune",
+                             Species == "Pti" ~ "Ptilidium ciliare",
+                             Species == "Ra" ~ "Racomitrium lanuginosum",
+                             Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum majus",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species)) %>%
+  mutate(Sp = case_when(Sp == "Sli" ~ "Sm",
+                        Sp == "S" ~ "S",
+                        TRUE ~ Sp)) %>%
+  mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21"))))
+#
+# Format long
+field_ARA.plot.long <- field_ARA.plot %>%
+  pivot_longer(cols = Soil_moisture:AirT_C, names_to = "Driver", values_to = "Environmental")
+#
+# Species together
+field_ARA.plot.long %>%
+  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature (°C)",
+                            Driver == "Soil_moisture" ~ "Soil moisture (VWC, %)",
+                            Driver == "Soil_temperature" ~ "Soil temperature (°C)",
+                            Driver == "PAR" ~ "PAR (µmol pr m² pr s)",
+                            TRUE ~ Driver)) %>%
+  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
+  #geom_smooth(method = "lm", se = FALSE, color = "black") +
+  geom_point(aes(color = Month, shape = Species)) +
+  scale_shape_manual(values = 1:10) +
+  facet_wrap(~Driver, ncol = 2, scales = "free") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR") +
+  theme_classic()
+#
+# For each species separately
+field_ARA.plot.long %>%
+  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature",
+                            Driver == "Soil_moisture" ~ "Soil moisture",
+                            Driver == "Soil_temperature" ~ "Soil temperature",
+                            TRUE ~ Driver)) %>%
+  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  geom_point(aes(color = Month)) +
+  ggh4x::facet_grid2(Driver ~ Sp, scales = "free", independent = "all") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+#
+#
+#
 #-------  ♪   N2 fixation   ♪ -------
 #
 # Regression plot of N2-fixation and ethylene production 
@@ -1400,7 +1409,7 @@ plot_grid(et_plot_grid, chambervsVialcc_legend, ncol = 1, rel_heights = c(15,1))
 vial_15N.2 %>%
   filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
   mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum flexuosum",
+                             Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species)) %>% 
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
