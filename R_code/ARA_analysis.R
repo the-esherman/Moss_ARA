@@ -133,10 +133,11 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 # Get linear equation and R2 for plot
 lm_eqn <- function(x, y) {
   m <- lm(y ~ x);
-  eq <- substitute(atop(italic(y) == a + b %.% italic(x),italic(R)^2~"="~R2),
+  eq <- substitute(atop(italic(y) == a + b %.% italic(x), italic(R)^2~"="~R2*","~~italic(p)~"="~pvalue),
                    list(a = format(unname(coef(m)[1]), digits = 2),
                         b = format(unname(coef(m)[2]), digits = 2),
-                        R2 = format(summary(m)$r.squared, digits = 3)))
+                        R2 = format(summary(m)$r.squared, digits = 3),
+                        pvalue = format(summary(m)$coefficients[2,4], digits = 2)))
   as.character(as.expression(eq));
 }
 #
@@ -1424,7 +1425,7 @@ vial_15N.2 %>%
                              Species == "S" ~ "S. ???",
                              TRUE ~ Species)) %>% 
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
-  geom_point() +
+  geom_point(aes(shape = Species)) +
   geom_smooth(method = "lm", se = FALSE) +
   geom_abline(intercept=0, slope=3)+ # Theoretical model relationship of 3:1 AR:N2
   #facet_wrap(~Species) +
@@ -1432,7 +1433,7 @@ vial_15N.2 %>%
   geom_text(x = 15, y = 4, label = lm_eqn(vial_15N.2$N_h_m2, vial_15N.2$Et_prod_umol_h_m2), parse = TRUE) +
   labs(x = expression("Fixed nitrogen (µg "*N[2]~~h^-1~m^-2*")"), y = expression("Ethylene production (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"))
+  theme(legend.position = "bottom")
 #
 #
 #
