@@ -137,7 +137,7 @@ lm_eqn <- function(x, y) {
                    list(a = format(unname(coef(m)[1]), digits = 2),
                         b = format(unname(coef(m)[2]), digits = 2),
                         R2 = format(summary(m)$r.squared, digits = 3),
-                        pvalue = format(summary(m)$coefficients[2,4], digits = 2)))
+                        pvalue = ifelse(summary(m)$coefficients[2,4] < 0.001, "< 0.001", format(summary(m)$coefficients[2,4], digits = 2))))
   as.character(as.expression(eq));
 }
 #
@@ -1431,7 +1431,28 @@ vial_15N.2 %>%
   #facet_wrap(~Species) +
   coord_cartesian(xlim = c(0,40)) +
   geom_text(x = 15, y = 4, label = lm_eqn(vial_15N.2$N_h_m2, vial_15N.2$Et_prod_umol_h_m2), parse = TRUE) +
+  annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3 %.% italic(x)))), parse = TRUE) +
   labs(x = expression("Fixed nitrogen (µg "*N[2]~~h^-1~m^-2*")"), y = expression("Ethylene production (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
+  theme_classic(base_size = 15) +
+  theme(legend.position = "bottom")
+#
+# The reverse:
+# y = N2-fixed, x = ethylene produced
+vial_15N.2 %>%
+  filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
+  mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum majus",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species)) %>% 
+  ggplot(aes(y = N_h_m2, x = Et_prod_umol_h_m2)) + #, color = Species)) +
+  geom_point(aes(shape = Species)) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_abline(intercept=0, slope=1/3)+ # Theoretical model relationship of 3:1 AR:N2
+  #facet_wrap(~Species) +
+  coord_cartesian(ylim = c(0,40)) +
+  geom_text(x = 4, y = 35, label = lm_eqn(vial_15N.2$Et_prod_umol_h_m2, vial_15N.2$N_h_m2), parse = TRUE) +
+  annotate("text", x = 4, y = 6, label = as.character(expression(paste(italic(y) ==  frac(1,3) %.% italic(x)))), parse = TRUE) +
+  labs(y = expression("Fixed nitrogen (µg "*~~N[2]~h^-1~m^-2*")"), x = expression("Ethylene production (µmol  "*C[2]*H[4]~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
   theme(legend.position = "bottom")
 #
