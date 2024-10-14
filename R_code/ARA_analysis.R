@@ -1229,23 +1229,41 @@ ARA_vialRound.basic %>%
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials")) + 
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(2, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
-
-
-vial_ARA_field %>%
+#
+#
+# Vials in climate chamber
+ARA_vialRound.basic %>%
+  mutate(Sp = Species,
+         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+                             Species == "Di" ~ "Dicranum scoparium",
+                             Species == "Hy" ~ "Hylocomium splendens",
+                             Species == "Pl" ~ "Pleurozium schreberi",
+                             Species == "Po" ~ "Polytrichum commune",
+                             Species == "Pti" ~ "Ptilidium ciliare",
+                             Species == "Ra" ~ "Racomitrium lanuginosum",
+                             Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum majus",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species),
+         Month = case_when(Month == "Feb21" ~ "February",
+                           Month == "Mar21" ~ "March",
+                           Month == "Jul21" ~ "July")) %>%
+  mutate(across(Month, ~ factor(.x, levels=c("February", "March", "July")))) %>%
+  summarise(meanEt_pro = mean(Et_prod_vial.CC, na.rm = TRUE), se = sd(Et_prod_vial.CC)/sqrt(length(Et_prod_vial.CC)), .by = c(Month, Species, Sp)) %>%
+  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
+                         Sp == "Di" ~ "Tall unbranched turf",
+                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
+                         Sp == "Po" ~ "Polytrichales",
+                         Sp == "Pti" ~ "Leafy liverwort",
+                         Sp == "Ra" ~ "Large cushion",
+                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
   ggplot() +
-  geom_boxplot(aes(y = Et_prod_umol_h_m2, x = Round)) +
-  facet_wrap(~Species, scales = "free")
-
-vial_ARA_climateChamber %>%
-  ggplot() +
-  geom_point(aes(y = Et_prod_umol_h_m2, x = Round)) +
-  facet_wrap(~Species, scales = "free")
-
-
-vial_ARA_field %>%
-  ggplot() +
-  geom_boxplot(aes(y = AirT_C, x = Round)) +
-  facet_wrap(~Species, scales = "free")
+  geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
+  geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
+  facet_wrap(~Species, scales = "free", ncol = 5) +
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials in climate chamber")) + 
+  theme_classic(base_size = 15) +
+  theme(panel.spacing = unit(2, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
 #
 #
 #
@@ -1356,7 +1374,11 @@ plot_grid(et_plot_grid, chambervsVialcc_legend, ncol = 1, rel_heights = c(15,1))
 #
 # Plot Environmental drivers with AR
 #
-# In situ chambers
+#
+#      ╔══════════════════════════╗
+# -- ♪ ♪ Field chambers & Drivers ♪ ♪ --
+#      ╚══════════════════════════╝
+#
 #
 # Select necessary columns
 field_ARA.plot <- field_ARA_wide.5 %>%
@@ -1395,7 +1417,7 @@ field_ARA.plot.long %>%
   scale_shape_manual(values = 1:10) +
   facet_wrap(~Driver, ncol = 2, scales = "free") +
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR") +
-  theme_classic()
+  theme_classic(base_size = 15)
 #
 # For each species separately
 field_ARA.plot.long %>%
@@ -1403,13 +1425,150 @@ field_ARA.plot.long %>%
                             Driver == "Soil_moisture" ~ "Soil moisture",
                             Driver == "Soil_temperature" ~ "Soil temperature",
                             TRUE ~ Driver)) %>%
+  #filter(Driver == "Air temperature" | Driver == "Soil moisture") %>%
   ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
   geom_smooth(method = "lm", se = TRUE, color = "black") +
   geom_point(aes(color = Month)) +
   ggh4x::facet_grid2(Driver ~ Sp, scales = "free", independent = "all") +
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR") +
-  theme_bw() +
-  theme(legend.position = "bottom")
+  theme_bw(base_size = 15) +
+  theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+#      ╔═════════════════╗
+# -- ♪ ♪ Vials & Drivers ♪ ♪ --
+#      ╚═════════════════╝
+#
+#
+# Vials in the field
+#
+# Select necessary columns
+vial_ARA_field.plot <- vial_ARA_field %>%
+  select(Block:Species, Round, Habitat, PAR:GWC, Et_prod_umol_h_m2) %>%
+  # Add Round names and bryophyte functional groups (BFG)
+  mutate(Month = case_when(Round == "A" ~ "Feb21",
+                           Round == "B" ~ "Mar21",
+                           Round == "C" ~ "Jul21"),
+         BFG = case_when(Species == "Au" ~ "Short unbranched turf",
+                         Species == "Di" ~ "Tall unbranched turf",
+                         Species == "Hy" | Species == "Pl" ~ "Weft",
+                         Species == "Po" ~ "Polytrichales",
+                         Species == "Pti" ~ "Leafy liverwort",
+                         Species == "Ra" ~ "Large cushion",
+                         Species == "S" | Species == "Sli" | Species == "Sf" ~ "Sphagnum")) %>%
+  relocate(c(Month, Habitat, BFG), .after = Round) %>%
+  mutate(Sp = Species,
+         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+                             Species == "Di" ~ "Dicranum scoparium",
+                             Species == "Hy" ~ "Hylocomium splendens",
+                             Species == "Pl" ~ "Pleurozium schreberi",
+                             Species == "Po" ~ "Polytrichum commune",
+                             Species == "Pti" ~ "Ptilidium ciliare",
+                             Species == "Ra" ~ "Racomitrium lanuginosum",
+                             Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum majus",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species)) %>%
+  mutate(Sp = case_when(Sp == "Sli" ~ "Sm",
+                        Sp == "S" ~ "S",
+                        TRUE ~ Sp)) %>%
+  mutate(across(Month, ~ factor(.x, levels=c("Feb21", "Mar21", "Jul21"))))
+#
+# Format long
+vial_ARA_field.plot.long <- vial_ARA_field.plot %>%
+  pivot_longer(cols = PAR:GWC, names_to = "Driver", values_to = "Environmental")
+#
+# Species together
+vial_ARA_field.plot.long %>%
+  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature (°C)",
+                            Driver == "GWC" ~ "Gravimetric water content (GWC, %)",
+                            Driver == "PAR" ~ "PAR (µmol pr m² pr s)",
+                            TRUE ~ Driver)) %>%
+  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
+  #geom_smooth(method = "lm", se = FALSE, color = "black") +
+  geom_point(aes(color = Month, shape = Species)) +
+  scale_shape_manual(values = 1:10) +
+  facet_wrap(~Driver, ncol = 2, scales = "free") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials") +
+  theme_classic(base_size = 15)
+#
+# For each species separately
+vial_ARA_field.plot.long %>%
+  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature",
+                            TRUE ~ Driver)) %>%
+  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
+  #geom_smooth(method = "lm", se = TRUE, color = "black") +
+  geom_point(aes(color = Month)) +
+  ggh4x::facet_grid2(Driver ~ Sp, scales = "free", independent = "all") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials") +
+  theme_bw(base_size = 15) +
+  theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+# Vials in climate chamber
+#
+# Select necessary columns
+vial_ARA_CC.plot <- vial_ARA_climateChamber %>%
+  select(Block:Species, Round, Habitat, PAR:GWC, Et_prod_umol_h_m2) %>%
+  # Add Round names and bryophyte functional groups (BFG)
+  mutate(Month = case_when(Round == "A5" ~ "Feb21",
+                           Round == "B5" ~ "Mar21",
+                           Round == "C5" ~ "Jul21"),
+         BFG = case_when(Species == "Au" ~ "Short unbranched turf",
+                         Species == "Di" ~ "Tall unbranched turf",
+                         Species == "Hy" | Species == "Pl" ~ "Weft",
+                         Species == "Po" ~ "Polytrichales",
+                         Species == "Pti" ~ "Leafy liverwort",
+                         Species == "Ra" ~ "Large cushion",
+                         Species == "S" | Species == "Sli" | Species == "Sf" ~ "Sphagnum")) %>%
+  relocate(c(Month, Habitat, BFG), .after = Round) %>%
+  mutate(Sp = Species,
+         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+                             Species == "Di" ~ "Dicranum scoparium",
+                             Species == "Hy" ~ "Hylocomium splendens",
+                             Species == "Pl" ~ "Pleurozium schreberi",
+                             Species == "Po" ~ "Polytrichum commune",
+                             Species == "Pti" ~ "Ptilidium ciliare",
+                             Species == "Ra" ~ "Racomitrium lanuginosum",
+                             Species == "Sf" ~ "Sphagnum fuscum",
+                             Species == "Sli" ~ "Sphagnum majus",
+                             Species == "S" ~ "S. ???",
+                             TRUE ~ Species)) %>%
+  mutate(Sp = case_when(Sp == "Sli" ~ "Sm",
+                        Sp == "S" ~ "S",
+                        TRUE ~ Sp)) %>%
+  mutate(across(Month, ~ factor(.x, levels=c("Feb21", "Mar21", "Jul21"))))
+#
+# Format long
+vial_ARA_CC.plot.long <- vial_ARA_CC.plot %>%
+  pivot_longer(cols = PAR:GWC, names_to = "Driver", values_to = "Environmental")
+#
+# Species together
+vial_ARA_CC.plot.long %>%
+  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature (°C)",
+                            Driver == "GWC" ~ "Gravimetric water content (GWC, %)",
+                            Driver == "PAR" ~ "PAR (µmol pr m² pr s)",
+                            TRUE ~ Driver)) %>%
+  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
+  #geom_smooth(method = "lm", se = FALSE, color = "black") +
+  geom_point(aes(color = Month, shape = Species)) +
+  scale_shape_manual(values = 1:10) +
+  facet_wrap(~Driver, ncol = 2, scales = "free") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials") +
+  theme_classic(base_size = 15)
+#
+# For each species separately
+vial_ARA_CC.plot.long %>%
+  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature",
+                            TRUE ~ Driver)) %>%
+  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
+  #geom_smooth(method = "lm", se = TRUE, color = "black") +
+  geom_point(aes(color = Month)) +
+  ggh4x::facet_grid2(Driver ~ Sp, scales = "free", independent = "all") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials") +
+  theme_bw(base_size = 15) +
+  theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #
