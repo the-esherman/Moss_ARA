@@ -535,8 +535,8 @@ vial_ARA.3 <- vial_ARA.2 %>%
                               TRUE ~ Round)) %>%
   relocate(Roundsub, .after = Round) %>%
   left_join(environ_vial, by = join_by(Roundsub)) %>%
-  mutate(PAR = if_else(Species == "S" | Species == "Sf" | Species == "Sli", PAR_M, PAR),
-         AirT_C = if_else(Species == "S" | Species == "Sf" | Species == "Sli", AirT_C, AirT_h)) %>%
+  mutate(PAR = if_else(str_detect(Roundsub, "5"), PAR, if_else(Species == "S" | Species == "Sf" | Species == "Sli", PAR_M, PAR)),
+         AirT_C = if_else(str_detect(Roundsub, "5"), AirT_C, if_else(Species == "S" | Species == "Sf" | Species == "Sli", AirT_C, AirT_h))) %>%
   select(!c(PAR_M, AirT_h)) %>%
   mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * (AirT_C+273)) / Vial_area_m2) %>%
   # Ethylene production is either greater than 0 or 0. No negative values
