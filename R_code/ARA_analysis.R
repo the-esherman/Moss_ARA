@@ -1186,10 +1186,11 @@ field_ARA_wide.5 %>%
   ggplot() +
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
-  facet_wrap(~Species, scales = "free", ncol = 2) +
+  facet_wrap(~Species, scales = "free", ncol = 3) +
+  viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #
@@ -1226,10 +1227,11 @@ ARA_vialRound.basic %>%
   ggplot() +
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
-  facet_wrap(~Species, scales = "free", ncol = 5) +
+  facet_wrap(~Species, scales = "free", ncol = 4) +
+  viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials")) + 
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(2, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
+  theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
 #
 #
 # Vials in climate chamber
@@ -1261,10 +1263,11 @@ ARA_vialRound.basic %>%
   ggplot() +
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
-  facet_wrap(~Species, scales = "free", ncol = 5) +
+  facet_wrap(~Species, scales = "free", ncol = 4) +
+  viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials in climate chamber")) + 
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(2, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
+  theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
 #
 #
 #
@@ -1325,12 +1328,16 @@ field_ARA.plot.long %>%
                             TRUE ~ Driver)) %>%
   #filter(Driver == "Air temperature" | Driver == "Soil moisture") %>%
   ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
-  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  #geom_smooth(method = "lm", se = TRUE, color = "black") +
   geom_point(aes(color = Month)) +
+  #scale_shape_manual(values = 1:11) + # Months as shapes need to define 11 shapes
   ggh4x::facet_grid2(Driver ~ Sp, scales = "free", independent = "all") +
+  viridis::scale_color_viridis(discrete = T) + # If using colors use the colorblind friendly viridis colormap
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR") +
   theme_bw(base_size = 15) +
-  theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1))
+  theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1)) +
+  guides(col = guide_legend(nrow = 1)) # For colors all in one row
+  #guides(shape = guide_legend(nrow = 1)) # For all shapes in one row
 #
 #
 #
