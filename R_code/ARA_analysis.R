@@ -924,6 +924,7 @@ emmeans(modelSf,"Round")
 #
 #
 # Sli
+# Or S. majus
 modelSli <- glmmTMB(sqrt(Et_prod_umol_h_m2) ~ factor(Round),data=Q1_ARA[Q1_ARA$Species=="Sli",], ziformula=~1, family=gaussian)
 Anova(modelSli, type = c("II"), test.statistic = c("Chi"), component = "cond")
 # χ       DF    p
@@ -1267,109 +1268,6 @@ ARA_vialRound.basic %>%
 #
 #
 #
-#      ╔═════════════════════════╗
-# -- ♪ ♪ Field chambers vs vials ♪ ♪ --
-#      ╚═════════════════════════╝
-#
-# Regression plots
-#
-# Vial (field) vs vial (climate chamber)
-vialvsVial_plot <- ARA_vialRound.basic %>%
-  mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
-                             Species == "Di" ~ "Dicranum scoparium",
-                             Species == "Hy" ~ "Hylocomium splendens",
-                             Species == "Pl" ~ "Pleurozium schreberi",
-                             Species == "Po" ~ "Polytrichum commune",
-                             Species == "Pti" ~ "Ptilidium ciliare",
-                             Species == "Ra" ~ "Racomitrium lanuginosum",
-                             Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "S. ???",
-                             TRUE ~ Species),
-         Month = case_when(Month == "Feb21" ~ "February",
-                           Month == "Mar21" ~ "March",
-                           Month == "Jul21" ~ "July")) %>%
-  ggplot(aes(x = Et_prod_vial.Field, y = Et_prod_vial.CC, color = Month)) +
-  geom_point() +
-  scale_color_viridis_d() +
-  geom_smooth(method = lm, se = FALSE) +
-  facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = expression("Vial in the field (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), y = expression("Vial in the climate chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = "Vial (field) vs vial (climate chamber)") +
-  theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"), legend.position = "none")
-#
-# Field chamber vs vial (field)
-chambervsVialfield_plot <- ARA_vialRound.basic %>%
-  mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
-                             Species == "Di" ~ "Dicranum scoparium",
-                             Species == "Hy" ~ "Hylocomium splendens",
-                             Species == "Pl" ~ "Pleurozium schreberi",
-                             Species == "Po" ~ "Polytrichum commune",
-                             Species == "Pti" ~ "Ptilidium ciliare",
-                             Species == "Ra" ~ "Racomitrium lanuginosum",
-                             Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "S. ???",
-                             TRUE ~ Species),
-         Month = case_when(Month == "Feb21" ~ "February",
-                           Month == "Mar21" ~ "March",
-                           Month == "Jul21" ~ "July")) %>%
-  ggplot(aes(x = Et_prod_field, y = Et_prod_vial.Field, color = Month)) +
-  geom_point() +
-  scale_color_viridis_d() +
-  geom_smooth(method = lm, se = FALSE) +
-  facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = expression("Field chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), y = expression("Vial in the field (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = "Field chamber vs vial (field)") +
-  theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"), legend.position = "none")
-#
-# Field chamber vs vial (climate chamber)
-chambervsVialcc_plot <- ARA_vialRound.basic %>%
-  mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
-                             Species == "Di" ~ "Dicranum scoparium",
-                             Species == "Hy" ~ "Hylocomium splendens",
-                             Species == "Pl" ~ "Pleurozium schreberi",
-                             Species == "Po" ~ "Polytrichum commune",
-                             Species == "Pti" ~ "Ptilidium ciliare",
-                             Species == "Ra" ~ "Racomitrium lanuginosum",
-                             Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "S. ???",
-                             TRUE ~ Species),
-         Month = case_when(Month == "Feb21" ~ "February",
-                           Month == "Mar21" ~ "March",
-                           Month == "Jul21" ~ "July")) %>%
-  ggplot(aes(x = Et_prod_field, y = Et_prod_vial.CC, color = Month)) +
-  geom_point() +
-  scale_color_viridis_d() +
-  geom_smooth(method = lm, se = FALSE) +
-  facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = expression("Field chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), y = expression("Vial in the climate chamber (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = "Field chamber vs vial (climate chamber)") +
-  theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"), legend.position = "bottom")
-#
-# Plot all graphs together
-plot_grid(vialvsVial_plot, chambervsVialfield_plot, chambervsVialcc_plot, align = "h", ncol = 3)
-#
-# For vertical combination each plot facet_wrap(ncol = 5). plot_grid(align = "v", ncol = 3)
-# For horizontal combination each plot facet_wrap(ncol = 2). plot_grid(align = "h", ncol = 1)
-#
-# For plots with color by month:
-# ggplot(aes(color = Month)) + scale_color_viridis_d()
-# Remove legend from all but the one used for extracting the value: +theme(legend.position = "none")
-#
-# Extract month legend
-chambervsVialcc_legend <- get_legend(chambervsVialcc_plot)
-#
-# Remove from plot
-chambervsVialcc_plot.1 <- chambervsVialcc_plot + theme(legend.position = "none")
-#
-# Plot
-et_plot_grid <- plot_grid(vialvsVial_plot, chambervsVialfield_plot, chambervsVialcc_plot.1, align = "h", ncol = 3)
-plot_grid(et_plot_grid, chambervsVialcc_legend, ncol = 1, rel_heights = c(15,1))
-#
-#
-#
 #-------  ♪   ARA & drivers ♪ -------
 #
 # Plot Environmental drivers with AR
@@ -1555,7 +1453,7 @@ vial_ARA_CC.plot.long %>%
   geom_point(aes(color = Month, shape = Species)) +
   scale_shape_manual(values = 1:10) +
   facet_wrap(~Driver, ncol = 2, scales = "free") +
-  labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials in climate chamber") +
   theme_classic(base_size = 15)
 #
 # For each species separately
@@ -1566,7 +1464,7 @@ vial_ARA_CC.plot.long %>%
   #geom_smooth(method = "lm", se = TRUE, color = "black") +
   geom_point(aes(color = Month)) +
   ggh4x::facet_grid2(Driver ~ Sp, scales = "free", independent = "all") +
-  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials in climate chamber") +
   theme_bw(base_size = 15) +
   theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -1706,7 +1604,7 @@ plot_ly(field_ARA_wide.4_species, x = ~Au, y = ~Round, name = "Aulacomnium turgi
   add_trace(x = ~Ra, y = ~Round, name = "Racomitrium lanuginosum",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
   add_trace(x = ~S, y = ~Round, name = "Sphagnum sp",type = 'scatter', mode = "markers", marker = list(color = "#009E73")) %>%
   add_trace(x = ~Sf, y = ~Round, name = "Sphagnum fuscum",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
-  add_trace(x = ~Sli, y = ~Round, name = "Sphagnum lindbergii",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
+  add_trace(x = ~Sli, y = ~Round, name = "Sphagnum majus",type = 'scatter', mode = "markers", marker = list(color = "#D55E00")) %>%
   layout(title = "Ethylene production per species", xaxis = list(title = "Ethylene production (µmol pr h pr m2)"), margin = list(l = 100))
 #
 #
