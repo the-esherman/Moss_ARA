@@ -652,6 +652,7 @@ field_environ.3 <- field_ARA_wide.5 %>%
 #
 # Export
 # write_csv(field_environ.3, "export/N2fix_environ2.csv")
+field_environ.3 <- read_csv("export/N2fix_environ2_old.csv", col_names = TRUE)
 #
 #
 # Correlation plot of environmental data
@@ -1186,7 +1187,7 @@ field_ARA_wide.5 %>%
   ggplot() +
   geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
-  facet_wrap(~Species, scales = "free", ncol = 3) +
+  facet_wrap(~Species, scales = "free", ncol = 4) +
   viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
   theme_classic(base_size = 15) +
