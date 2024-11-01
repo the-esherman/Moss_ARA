@@ -1492,11 +1492,11 @@ vial_15N.2 %>%
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point(aes(shape = Species)) +
   geom_smooth(method = "lm", se = FALSE) +
-  geom_abline(intercept=0, slope=3)+ # Theoretical model relationship of 3:1 AR:N2
+  geom_abline(intercept=0, slope=3.2)+ # Theoretical model relationship of 3:1 AR:N2
   #facet_wrap(~Species) +
   coord_cartesian(xlim = c(0,40)) +
   geom_text(x = 15, y = 4, label = lm_eqn(vial_15N.2$N_h_m2, vial_15N.2$Et_prod_umol_h_m2), parse = TRUE) +
-  annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3 %.% italic(x)))), parse = TRUE) +
+  annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3.2 %.% italic(x)))), parse = TRUE) +
   labs(x = expression("Fixed nitrogen (µg "*N[2]~~h^-1~m^-2*")"), y = expression("Ethylene production (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
   theme(legend.position = "bottom")
