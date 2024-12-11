@@ -7,13 +7,13 @@
 #=======  ♣   Libraries     ♣ =======
 library(plotly)
 library(tidyverse)
-library(readxl)
+#library(readxl)
 library(lubridate)
 library(car)
 library(nlme)
 library(glmmTMB)
 library(emmeans)
-library(vegan)
+#library(vegan)
 library(cowplot)
 library(ggrepel)
 #library(lme4)
@@ -22,8 +22,8 @@ library(ggrepel)
 #
 #=======  ♠   Load data     ♠ =======
 # Import ID's
-ID_info <- read_xlsx("Data_raw/Data_ID.xlsx")
-ID_15N <- read_xlsx("Data_raw/ID_15N.xlsx")
+ID_info <- read_csv("Data_clean/Data_ID.csv", col_types = "cccccc")
+ID_15N <- read_csv("Data_clean/ID_15N.csv", col_types = "ccccnncc")
 #
 #    ╔═══════╗
 # -- • Field • --
@@ -33,7 +33,7 @@ ID_15N <- read_xlsx("Data_raw/ID_15N.xlsx")
 field_ARA <- read_csv("Data_clean/field_ARA.csv", col_names = TRUE)
 #
 # Bryophyte density count
-densityCount <- read_xlsx("Data_raw/Moss counts.xlsx")
+densityCount <- read_csv("Data_clean/Moss_counts.csv", col_types = "cccnnnc")
 densityArea <- (2.2/2)^2*pi # Area of one sample for density count in cm2
 #
 # The small corers that were used for density and for selecting vial samples:
