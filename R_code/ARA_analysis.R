@@ -1402,10 +1402,10 @@ field_ARA.plot.long %>%
   #filter(Driver == "Air temperature" | Driver == "Soil moisture") %>%
   ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
   #geom_smooth(method = "lm", se = TRUE, color = "black") +
-  geom_point(aes(shape = Month)) +
+  geom_point(aes(color = Month)) +
   #scale_shape_manual(values = 1:11) + # Months as shapes need to define 11 shapes
   ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all") +
-  viridis::scale_color_viridis(discrete = T) + # If using colors use the colorblind friendly viridis colormap
+  viridis::scale_color_viridis(discrete = T, option = "H") + # If using colors use the colorblind friendly viridis colormap
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte acetylene reduction") +
   theme_bw() +
   theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1)) +
