@@ -21,8 +21,7 @@ library(ggrepel)
 #
 #
 #=======  ♠   Load data     ♠ =======
-# Import ID's
-ID_info <- read_csv("Data_clean/Data_ID.csv", col_types = "cccccc")
+# Import ID of 15N data
 ID_15N <- read_csv("Data_clean/ID_15N.csv", col_types = "ccccnncc")
 #
 #    ╔═══════╗
@@ -219,7 +218,7 @@ AirT_CC <- AirT_CC %>%
 # Vial moisture
 vial_moisture <- vial_moisture %>%
   filter(Time_nr != "c_NatAb") %>% # the moisture of natural abundance samples are not relevant for ARA, only for N2 fixation
-  select(!c(Sample_ID, WW, DW, Count, H2O)) # Remove unused variables
+  select(!c(Sample_ID, WW, DW, H2O)) # Remove unused variables
 #
 # Vial field
 vial_moisture.field <- vial_moisture %>%
