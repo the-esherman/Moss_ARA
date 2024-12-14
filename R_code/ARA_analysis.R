@@ -16,6 +16,7 @@ library(emmeans)
 #library(vegan)
 library(cowplot)
 library(ggrepel)
+library(ggh4x)
 #library(lme4)
 #
 #
@@ -1189,6 +1190,19 @@ field_ARA_wide.5 %>%
   facet_wrap(~Species, scales = "free", ncol = 4) +
   viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
+  # Specify y-axes scales so that some species match
+  facetted_pos_scales(
+    y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 0.7)), # change breaks by adding: breaks = seq(0, x, xx, xxx)),
+             Species == "Dicranum scoparium" ~ scale_y_continuous(limits = c(0, 2)),
+             Species == "Hylocomium splendens" ~ scale_y_continuous(limits = c(0, 0.7)),
+             Species == "Pleurozium schreberi" ~ scale_y_continuous(limits = c(0, 0.7)),
+             Species == "Polytrichum commune" ~ scale_y_continuous(limits = c(0, 2)),
+             Species == "Ptilidium ciliare" ~ scale_y_continuous(limits = c(0, 11)),
+             Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 2)),
+             Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 11)),
+             Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 300)),
+             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 11)))
+  ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -1230,6 +1244,19 @@ ARA_vialRound.basic %>%
   facet_wrap(~Species, scales = "free", ncol = 4) +
   viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials")) + 
+  # Specify y-axes scales so that some species match
+  facetted_pos_scales(
+    y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 1.7)),
+             Species == "Dicranum scoparium" ~ scale_y_continuous(limits = c(0, 1.7)),
+             Species == "Hylocomium splendens" ~ scale_y_continuous(limits = c(0, 1.7)),
+             Species == "Pleurozium schreberi" ~ scale_y_continuous(limits = c(0, 1.7)),
+             Species == "Polytrichum commune" ~ scale_y_continuous(limits = c(0, 1.7)),
+             Species == "Ptilidium ciliare" ~ scale_y_continuous(limits = c(0, 3)),
+             Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 1.7)),
+             Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 3)),
+             Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 14)),
+             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 14)))
+  ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
 #
@@ -1266,6 +1293,19 @@ ARA_vialRound.basic %>%
   facet_wrap(~Species, scales = "free", ncol = 4) +
   viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials in climate chamber")) + 
+  # Specify y-axes scales so that some species match
+  facetted_pos_scales(
+    y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 1.05)),
+             Species == "Dicranum scoparium" ~ scale_y_continuous(limits = c(0, 1.05)),
+             Species == "Hylocomium splendens" ~ scale_y_continuous(limits = c(0, 1.05)),
+             Species == "Pleurozium schreberi" ~ scale_y_continuous(limits = c(0, 1.05)),
+             Species == "Polytrichum commune" ~ scale_y_continuous(limits = c(0, 1.05)),
+             Species == "Ptilidium ciliare" ~ scale_y_continuous(limits = c(0, 1.05)),
+             Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 1.05)),
+             Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 6)),
+             Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 6)),
+             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 6)))
+  ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
 #
