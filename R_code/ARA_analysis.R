@@ -1068,7 +1068,8 @@ EM50_Heath %>%
 #
 # GWC graph
 vial_ARA_field %>%
-  mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
+  mutate(Sp = Species,
+         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
                              Species == "Di" ~ "Dicranum scoparium",
                              Species == "Hy" ~ "Hylocomium splendens",
                              Species == "Pl" ~ "Pleurozium schreberi",
@@ -1084,12 +1085,33 @@ vial_ARA_field %>%
                            Round == "B" ~ "March",
                            Round == "C" ~ "July")) %>%
   mutate(across(Month, ~ factor(.x, levels=c("February", "March", "July")))) %>%
-  summarise(meanGWC = mean(GWC, na.rm = TRUE), se = sd(GWC)/sqrt(length(GWC)), .by = c(Month, Species)) %>%
+  summarise(meanGWC = mean(GWC, na.rm = TRUE), se = sd(GWC)/sqrt(length(GWC)), .by = c(Month, Species, Sp)) %>%
+  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
+                         Sp == "Di" ~ "Tall unbranched turf",
+                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
+                         Sp == "Po" ~ "Polytrichales",
+                         Sp == "Pti" ~ "Leafy liverwort",
+                         Sp == "Ra" ~ "Large cushion",
+                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
   ggplot() +
   geom_errorbar(aes(x = Month, y = meanGWC, ymin=meanGWC, ymax=meanGWC+se), position=position_dodge(.9)) +
-  geom_col(aes(x = Month, y = meanGWC), color = "black") + 
+  geom_col(aes(x = Month, y = meanGWC, fill = BFG), color = "black") + 
   facet_wrap(~Species, scales = "free", ncol = 5) +
+  viridis::scale_fill_viridis(discrete = T) +
   labs(x = "Measuring period (Month)", y = expression("Gravimetric water content (GWC, % "*DW^-1*")"), title = expression("Bryophyte water content")) + 
+  # Specify y-axes scales so that some species match
+  facetted_pos_scales(
+    y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 1150)),
+             Species == "Dicranum scoparium" ~ scale_y_continuous(limits = c(0, 1150)),
+             Species == "Hylocomium splendens" ~ scale_y_continuous(limits = c(0, 2100)),
+             Species == "Pleurozium schreberi" ~ scale_y_continuous(limits = c(0, 2100)),
+             Species == "Polytrichum commune" ~ scale_y_continuous(limits = c(0, 1150)),
+             Species == "Ptilidium ciliare" ~ scale_y_continuous(limits = c(0, 2300)),
+             Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 1150)),
+             Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 2300)),
+             Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 2300)),
+             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 2300)))
+  ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"))
 #
