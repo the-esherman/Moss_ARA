@@ -1561,7 +1561,8 @@ N2_fix.Sph <- vial_15N.2 %>%
                              Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "Sphagnum complex",
                              TRUE ~ Species))
-N2_fix.Sph %>%
+#
+ARN2ratio_Sph.plot <- N2_fix.Sph %>%
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point(aes(shape = Species)) +
   geom_abline(intercept = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[1], slope = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[2], color = "blue", linewidth = 1) +
@@ -1569,7 +1570,7 @@ N2_fix.Sph %>%
   geom_abline(intercept=0, slope=3.2)+ # Theoretical model relationship of 3:1 AR:N2
   #facet_wrap(~Species) +
   coord_cartesian(xlim = c(0,40)) + #, ylim = c(-2.5,7)) +
-  geom_text(x = 15, y = 4, label = lm_eqn(N2_fix.plot$N_h_m2, N2_fix.plot$Et_prod_umol_h_m2), parse = TRUE) +
+  geom_text(x = 15, y = 4, label = lm_eqn(N2_fix.Sph$N_h_m2, N2_fix.Sph$Et_prod_umol_h_m2), parse = TRUE) +
   annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3.2 %.% italic(x)))), parse = TRUE) + # Text for the theoretical model relationship
   labs(x = expression("Fixed nitrogen (µg "*N[2]~~h^-1~m^-2*")"), y = expression("Ethylene production (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
@@ -1577,12 +1578,7 @@ N2_fix.Sph %>%
 #
 # The reverse:
 # y = N2-fixed, x = ethylene produced
-vial_15N.2 %>%
-  filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
-  mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
-                             TRUE ~ Species)) %>% 
+N2_fix.Sph %>%
   ggplot(aes(y = N_h_m2, x = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point(aes(shape = Species)) +
   geom_smooth(method = "lm", se = FALSE) +
@@ -1594,6 +1590,32 @@ vial_15N.2 %>%
   labs(y = expression("Fixed nitrogen (µg "*~~N[2]~h^-1~m^-2*")"), x = expression("Ethylene production (µmol  "*C[2]*H[4]~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
   theme(legend.position = "bottom")
+#
+# Calculate N fixed based on the conversion ratio for the Sphagnum species with non-zero values
+N2fixavg_Sph.plot <- N2_fix.Sph %>%
+  mutate(Species = case_when(Species == "Sphagnum fuscum" ~ "S. fuscum",
+                             Species == "Sphagnum majus" ~ "S. majus",
+                             Species == "Sphagnum complex" ~ "S. complex",
+                             TRUE ~ Species)) %>%
+  summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Species)) %>%
+  ggplot() +
+  geom_errorbar(aes(x = Species, y = meanN_fix, ymin=meanN_fix, ymax=meanN_fix+se), position=position_dodge(.9)) +
+  geom_col(aes(x = Species, y = meanN_fix), fill = "#35b779") + 
+  labs(x = element_blank(), y = expression("Fixed nitrogen (µg "*~N~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation")) + 
+  theme_classic(base_size = 15) +
+  theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
+#
+# Combine figures
+plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, align = "h", ncol = 2, rel_widths = c(3, 2), labels = c("A", "B"))
+#
+# Quick conversion
+N2_conv <- N2_fix.Sph %>%
+  mutate(N2fix_conv_µmol_m2_h = Et_prod_umol_h_m2*coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[2],
+         N2fix_conv_µmol_m2_day = N2fix_conv_µmol_m2_h*24) %>%
+  # µmol N pr g pr day = µg N pr h pr m2 * m2 pr sample
+  mutate(N_µmol_day_m2 = (N_h_m2*Vial_sample_area_m2)/Vial_sample_DW * 24 /14.006) %>%
+  mutate(N_nmol_day_m2 = N_µmol_day_m2 * 1000) %>%
+  mutate(logNnmol = log(N_nmol_day_m2+1))
 #
 #
 #
