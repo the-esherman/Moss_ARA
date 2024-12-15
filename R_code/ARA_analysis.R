@@ -1555,20 +1555,22 @@ vial_ARA_CC.plot.long %>%
 # Regression plot of N2-fixation and ethylene production 
 # Only for ethylene production values greater than 0
 # The only species that had positive ethylene production were the three sphagnum species
-vial_15N.2 %>%
+N2_fix.Sph <- vial_15N.2 %>%
   filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
   mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
                              Species == "S" ~ "Sphagnum complex",
-                             TRUE ~ Species)) %>% 
+                             TRUE ~ Species))
+N2_fix.Sph %>%
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point(aes(shape = Species)) +
+  geom_abline(intercept = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[1], slope = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[2], color = "blue", linewidth = 1) +
   geom_smooth(method = "lm", se = FALSE) +
   geom_abline(intercept=0, slope=3.2)+ # Theoretical model relationship of 3:1 AR:N2
   #facet_wrap(~Species) +
-  coord_cartesian(xlim = c(0,40)) +
-  geom_text(x = 15, y = 4, label = lm_eqn(vial_15N.2$N_h_m2, vial_15N.2$Et_prod_umol_h_m2), parse = TRUE) +
-  annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3.2 %.% italic(x)))), parse = TRUE) +
+  coord_cartesian(xlim = c(0,40)) + #, ylim = c(-2.5,7)) +
+  geom_text(x = 15, y = 4, label = lm_eqn(N2_fix.plot$N_h_m2, N2_fix.plot$Et_prod_umol_h_m2), parse = TRUE) +
+  annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3.2 %.% italic(x)))), parse = TRUE) + # Text for the theoretical model relationship
   labs(x = expression("Fixed nitrogen (µg "*N[2]~~h^-1~m^-2*")"), y = expression("Ethylene production (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
   theme(legend.position = "bottom")
