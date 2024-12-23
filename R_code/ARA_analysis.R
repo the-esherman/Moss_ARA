@@ -260,6 +260,9 @@ field_ARA.period <- field_ARA.2 %>%
   select(Round, Date, Start, End) %>%
   distinct(Round, Date, Start, End, .keep_all = TRUE)
 #
+# Save the dates to mark on environmental graph
+# write_csv(field_ARA.period, "export/ARA_period.csv", na = "NA")
+#
 # Combine loggers from site
 # Environmental data averaged over the time of measurement for each day when measurements were done
 field_environ <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1), full_join, by = join_by(Date, Tid)) %>%
