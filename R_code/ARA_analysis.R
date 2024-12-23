@@ -916,6 +916,8 @@ ARA_all.basic <- left_join(field.basic, vial.basic, by = join_by(Block, Species,
 ARA_vialRound.basic <- ARA_all.basic %>%
   filter(Round == 4 | Round == 5 | Round == 8)
 #
+measuringPeriod <- c("Sep",	"Oct",	"Nov",	"Feb",	"Mar",	"May",	"Jun",	"Jul",	"Sep",	"Oct",	"Nov")
+#
 # Export dataset
 #write_csv(ARA_vialRound.basic, "export/ARA_field_and_vial.csv")
 #
@@ -975,6 +977,7 @@ field_ARA_wide.5 %>%
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
   facet_wrap(~Species, scales = "free", ncol = 4) +
   viridis::scale_fill_viridis(discrete = T) +
+  scale_x_discrete(labels = measuringPeriod) +
   labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
   # Specify y-axes scales so that some species match
   facetted_pos_scales(
@@ -990,7 +993,7 @@ field_ARA_wide.5 %>%
              Species == "Sphagnum mixture" ~ scale_y_continuous(limits = c(0, 11)))
   ) +
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+  theme(panel.spacing = unit(1, "lines"), axis.text.x = element_text(angle = 60, hjust = 1))
 #
 #
 #
