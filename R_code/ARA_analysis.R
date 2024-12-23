@@ -842,7 +842,7 @@ vial_ARA_field %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species),
          GWC = GWC*100,
          Month = case_when(Round == "A" ~ "February",
@@ -874,7 +874,7 @@ vial_ARA_field %>%
              Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 1150)),
              Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 2300)),
              Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 2300)),
-             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 2300)))
+             Species == "Sphagnum mixture" ~ scale_y_continuous(limits = c(0, 2300)))
   ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"))
@@ -935,7 +935,7 @@ field_ARA_wide.5 %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species)) %>%
   mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
   summarise(meanEt_pro = mean(Et_prod_umol_h_m2, na.rm = TRUE), se = sd(Et_prod_umol_h_m2)/sqrt(length(Et_prod_umol_h_m2)), .by = c(Month, Species)) %>%
@@ -959,7 +959,7 @@ field_ARA_wide.5 %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species)) %>%
   mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
   summarise(meanEt_pro = mean(Et_prod_umol_h_m2, na.rm = TRUE), se = sd(Et_prod_umol_h_m2)/sqrt(length(Et_prod_umol_h_m2)), .by = c(Month, Species, Sp)) %>%
@@ -987,7 +987,7 @@ field_ARA_wide.5 %>%
              Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 2)),
              Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 11)),
              Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 300)),
-             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 11)))
+             Species == "Sphagnum mixture" ~ scale_y_continuous(limits = c(0, 11)))
   ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -1010,7 +1010,7 @@ ARA_vialRound.basic %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species),
          Month = case_when(Month == "Feb21" ~ "February",
                            Month == "Mar21" ~ "March",
@@ -1041,7 +1041,7 @@ ARA_vialRound.basic %>%
              Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 1.7)),
              Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 3)),
              Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 14)),
-             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 14)))
+             Species == "Sphagnum mixture" ~ scale_y_continuous(limits = c(0, 14)))
   ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
@@ -1059,7 +1059,7 @@ ARA_vialRound.basic %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species),
          Month = case_when(Month == "Feb21" ~ "February",
                            Month == "Mar21" ~ "March",
@@ -1090,7 +1090,7 @@ ARA_vialRound.basic %>%
              Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 1.05)),
              Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 6)),
              Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 6)),
-             Species == "Sphagnum complex" ~ scale_y_continuous(limits = c(0, 6)))
+             Species == "Sphagnum mixture" ~ scale_y_continuous(limits = c(0, 6)))
   ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
@@ -1120,7 +1120,7 @@ field_ARA.plot <- field_ARA_wide.5 %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species)) %>%
   mutate(Sp = case_when(Sp == "Sli" ~ "Sm",
                         Sp == "S" ~ "S",
@@ -1161,7 +1161,7 @@ field_ARA.plot.long %>%
                              Sp == "Ra" ~ "Racomitrium\n lanuginosum",
                              Sp == "Sf" ~ "Sphagnum\n fuscum",
                              Sp == "Sm" ~ "Sphagnum\n majus",
-                             Sp == "S" ~ "Sphagnum\n complex",
+                             Sp == "S" ~ "Sphagnum\n mixture",
                              TRUE ~ Species)) %>%
   #filter(Driver == "Air temperature" | Driver == "Soil moisture") %>%
   ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
@@ -1210,7 +1210,7 @@ vial_ARA_field.plot <- vial_ARA_field %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species)) %>%
   mutate(Sp = case_when(Sp == "Sli" ~ "Sm",
                         Sp == "S" ~ "S",
@@ -1275,7 +1275,7 @@ vial_ARA_CC.plot <- vial_ARA_climateChamber %>%
                              Species == "Ra" ~ "Racomitrium lanuginosum",
                              Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species)) %>%
   mutate(Sp = case_when(Sp == "Sli" ~ "Sm",
                         Sp == "S" ~ "S",
@@ -1323,7 +1323,7 @@ N2_fix.Sph <- vial_15N.2 %>%
   filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
   mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
                              Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum complex",
+                             Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species))
 #
 ARN2ratio_Sph.plot <- N2_fix.Sph %>%
@@ -1359,7 +1359,7 @@ N2_fix.Sph %>%
 N2fixavg_Sph.plot <- N2_fix.Sph %>%
   mutate(Species = case_when(Species == "Sphagnum fuscum" ~ "S. fuscum",
                              Species == "Sphagnum majus" ~ "S. majus",
-                             Species == "Sphagnum complex" ~ "S. complex",
+                             Species == "Sphagnum mixture" ~ "S. mixture",
                              TRUE ~ Species)) %>%
   summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Species)) %>%
   ggplot() +
