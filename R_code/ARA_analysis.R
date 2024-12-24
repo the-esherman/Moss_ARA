@@ -1329,6 +1329,7 @@ N2_fix.Sph <- vial_15N.2 %>%
                              Species == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species))
 #
+# Plot the AR:N2 ratio of Sphagnum
 ARN2ratio_Sph.plot <- N2_fix.Sph %>%
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point(aes(shape = Species)) +
@@ -1339,7 +1340,7 @@ ARN2ratio_Sph.plot <- N2_fix.Sph %>%
   coord_cartesian(xlim = c(0,40)) + #, ylim = c(-2.5,7)) +
   geom_text(x = 15, y = 4, label = lm_eqn(N2_fix.Sph$N_h_m2, N2_fix.Sph$Et_prod_umol_h_m2), parse = TRUE) +
   annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3.2 %.% italic(x)))), parse = TRUE) + # Text for the theoretical model relationship
-  labs(x = expression("Fixed nitrogen (µg "*N[2]~~h^-1~m^-2*")"), y = expression("Ethylene production (µmol  "*C[2]*H[4]~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
+  labs(x = expression("Fixed N (µg "*N[2]~~h^-1~m^-2*")"), y = expression(C[2]*H[4]*" production (µmol  "*h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
   theme(legend.position = "bottom")
 #
@@ -1368,12 +1369,13 @@ N2fixavg_Sph.plot <- N2_fix.Sph %>%
   ggplot() +
   geom_errorbar(aes(x = Species, y = meanN_fix, ymin=meanN_fix, ymax=meanN_fix+se), position=position_dodge(.9)) +
   geom_col(aes(x = Species, y = meanN_fix), fill = "#35b779") + 
-  labs(x = element_blank(), y = expression("Fixed nitrogen (µg "*~N~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation")) + 
+  scale_y_continuous(limits = c(0, 30), breaks = c(0, 5, 10, 15, 20, 25, 30)) +
+  labs(x = element_blank(), y = expression("Fixed N (µg "*~N~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation")) + 
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
+  theme(panel.spacing = unit(1, "lines"))
 #
 # Combine figures
-plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, align = "h", ncol = 2, rel_widths = c(3, 2), labels = c("A", "B"))
+plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, align = "h", ncol = 2, rel_widths = c(3, 2), labels = c("a", "b"))
 #
 # Quick conversion
 N2_conv <- N2_fix.Sph %>%
@@ -1383,6 +1385,83 @@ N2_conv <- N2_fix.Sph %>%
   mutate(N_µmol_day_m2 = (N_h_m2*Vial_sample_area_m2)/Vial_sample_DW * 24 /14.006) %>%
   mutate(N_nmol_day_m2 = N_µmol_day_m2 * 1000) %>%
   mutate(logNnmol = log(N_nmol_day_m2+1))
+#
+# N fixed based on 15N2
+N2fixavg.plot <- vial_15N.2 %>%
+  mutate(Sp = Species,
+         Species = case_when(Species == "Au" ~ "A. turgidum",
+                             Species == "Di" ~ "D. scoparium",
+                             Species == "Hy" ~ "H. splendens",
+                             Species == "Pl" ~ "P. schreberi",
+                             Species == "Po" ~ "P. commune",
+                             Species == "Pti" ~ "P. ciliare",
+                             Species == "Ra" ~ "R. lanuginosum",
+                             Species == "Sf" ~ "S. fuscum",
+                             Species == "Sli" ~ "S. majus",
+                             Species == "S" ~ "S. mixture",
+                             TRUE ~ Species)) %>%
+  filter(Sp != "Sf" & Sp != "Sli" & Sp != "S") %>%
+  summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Sp, Species)) %>%
+  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
+                         Sp == "Di" ~ "Tall unbranched turf",
+                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
+                         Sp == "Po" ~ "Polytrichales",
+                         Sp == "Pti" ~ "Leafy liverwort",
+                         Sp == "Ra" ~ "Large cushion",
+                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
+  ggplot() +
+  geom_errorbar(aes(x = Species, y = meanN_fix, ymin=meanN_fix, ymax=meanN_fix+se), position=position_dodge(.9)) +
+  geom_col(aes(x = Species, y = meanN_fix, fill = BFG)) +
+  scale_y_continuous(limits = c(0, 30), breaks = c(0, 5, 10, 15, 20, 25, 30)) +
+  viridis::scale_fill_viridis(discrete = T) +
+  labs(x = element_blank(), y = expression("Fixed N (µg "*~N~~h^-1~m^-2*")"), title = expression("Bryophyte "*N[2]*"-fixation")) + 
+  theme_classic(base_size = 15) +
+  theme(panel.spacing = unit(1, "lines"), legend.position = "none") #,axis.text.x=element_text(angle=60, hjust=1)
+#
+# To get the BFG colors:
+N2fixavg.plotLegend <- vial_15N.2 %>%
+  mutate(Sp = Species) %>%
+  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
+                         Sp == "Di" ~ "Tall unbranched turf",
+                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
+                         Sp == "Po" ~ "Polytrichales",
+                         Sp == "Pti" ~ "Leafy liverwort",
+                         Sp == "Ra" ~ "Large cushion",
+                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
+  ggplot() +
+  geom_col(aes(x = Species, y = N_h_m2, fill = BFG)) + 
+  viridis::scale_fill_viridis(discrete = T) +
+  theme_classic(base_size = 15)
+#
+N2fixavg.plotLegend.BFG <- get_plot_component(N2fixavg.plotLegend, "guide-box", return_all = TRUE)[[1]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
+#
+# Plot top and bottom row and combine
+top_row <- plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, align = "h", ncol = 2, rel_widths = c(3, 2), labels = c("a", "b"), label_size = 20)
+bottom_row <- plot_grid(N2fixavg.plot, N2fixavg.plotLegend.BFG, ncol = 2, rel_widths = c(4, 1), labels = c("c"), label_size = 20)
+plot_grid(top_row, bottom_row, align = "v", ncol = 1)
+
+
+# first align the top-row plot (p3) with the left-most plot of the
+# bottom row (p1)
+plots <- align_plots(p3, p1, align = 'v', axis = 'l')
+# then build the bottom row
+bottom_row <- plot_grid(plots[[2]], p2, labels = c('B', 'C'), label_size = 12)
+
+# then combine with the top row for final plot
+plot_grid(plots[[1]], bottom_row, labels = c('A', ''), label_size = 12, ncol = 1)
+
+
+
+plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, , , align = "h", ncol = 2, rel_widths = c(4, 2, 4, 1), labels = c("a", "b", "c"))
+
+
+
+# Combine figures
+# Layout of final graph:
+hlay <- rbind(c(1,1,2,2),
+              c(3,3,3,4))
+gridExtra::grid.arrange(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, N2fixavg.plot, N2fixavg.plotLegend.BFG, layout_matrix=hlay)
+
 #
 #
 #
