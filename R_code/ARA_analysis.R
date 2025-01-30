@@ -155,6 +155,16 @@ italicize_except_mixture <- function(labels) {
                    paste0("italic('", labels, "')")) # Italicize all others
   return(labels)
 }
+# Modified to also include line break ~ish
+italicize_except_mixture2 <- function(labels) {
+  labels <- as.character(labels)  # Ensure labels are characters
+  
+  # Modify "Sphagnum mixture" to italicize only "Sphagnum"
+  labels <- ifelse(labels == "Sphagnum mixture",
+                   "atop(italic('Sphagnum'),textstyle('mixture'))",  # Use plotmath expression
+                   paste0("atop(italic('", strsplit(labels, split = " ")[[1]][1], "'), italic('", strsplit(labels, split = " ")[[1]][2], "'))")) # Italicize all others
+  return(labels)
+}
 #
 #
 #
@@ -1370,20 +1380,32 @@ field_ARA.plot <- field_ARA_wide.5 %>%
 field_ARA.plot.long <- field_ARA.plot %>%
   pivot_longer(cols = Soil_moisture:AirT_C, names_to = "Driver", values_to = "Environmental")
 #
-# Species together
+# Species together (not used)
 field_ARA.plot.long %>%
   mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature (°C)",
                             Driver == "Soil_moisture" ~ "Soil moisture (VWC, %)",
                             Driver == "Soil_temperature" ~ "Soil temperature (°C)",
                             Driver == "PAR" ~ "PAR (µmol pr m² pr s)",
-                            TRUE ~ Driver)) %>%
+                            TRUE ~ Driver),
+         Species = case_when(Sp == "Au" ~ "<i>Aulacomnium turgidum</i>",
+                             Sp == "Di" ~ "<i>Dicranum scoparium</i>",
+                             Sp == "Hy" ~ "<i>Hylocomium splendens</i>",
+                             Sp == "Pl" ~ "<i>Pleurozium schreberi</i>",
+                             Sp == "Po" ~ "<i>Polytrichum commune</i>",
+                             Sp == "Pti" ~ "<i>Ptilidium ciliare</i>",
+                             Sp == "Ra" ~ "<i>Racomitrium lanuginosum</i>",
+                             Sp == "Sf" ~ "<i>Sphagnum fuscum</i>",
+                             Sp == "Sm" ~ "<i>Sphagnum majus</i>",
+                             Sp == "S" ~ "<i>Sphagnum</i> mixture",
+                             TRUE ~ Species)) %>%
   ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
   #geom_smooth(method = "lm", se = FALSE, color = "black") +
   geom_point(aes(color = Month, shape = Species)) +
   scale_shape_manual(values = 1:10) +
   facet_wrap(~Driver, ncol = 2, scales = "free") +
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR") +
-  theme_classic(base_size = 15)
+  theme_classic(base_size = 15) +
+  theme(legend.text = element_markdown())
 #
 # For each species separately
 field_ARA.plot.long %>%
@@ -1391,23 +1413,23 @@ field_ARA.plot.long %>%
                             Driver == "Soil_moisture" ~ "Soil moisture",
                             Driver == "Soil_temperature" ~ "Soil temperature",
                             TRUE ~ Driver),
-         Species = case_when(Sp == "Au" ~ "Aulacomnium\n turgidum",
-                             Sp == "Di" ~ "Dicranum\n scoparium",
-                             Sp == "Hy" ~ "Hylocomium\n splendens",
-                             Sp == "Pl" ~ "Pleurozium\n schreberi",
-                             Sp == "Po" ~ "Polytrichum\n commune",
-                             Sp == "Pti" ~ "Ptilidium\n ciliare",
-                             Sp == "Ra" ~ "Racomitrium\n lanuginosum",
-                             Sp == "Sf" ~ "Sphagnum\n fuscum",
-                             Sp == "Sm" ~ "Sphagnum\n majus",
-                             Sp == "S" ~ "Sphagnum\n mixture",
+         Species = case_when(Sp == "Au" ~ "Aulacomnium turgidum",
+                             Sp == "Di" ~ "Dicranum scoparium",
+                             Sp == "Hy" ~ "Hylocomium splendens",
+                             Sp == "Pl" ~ "Pleurozium schreberi",
+                             Sp == "Po" ~ "Polytrichum commune",
+                             Sp == "Pti" ~ "Ptilidium ciliare",
+                             Sp == "Ra" ~ "Racomitrium lanuginosum",
+                             Sp == "Sf" ~ "Sphagnum fuscum",
+                             Sp == "Sm" ~ "Sphagnum majus",
+                             Sp == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species)) %>%
   #filter(Driver == "Air temperature" | Driver == "Soil moisture") %>%
   ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
   #geom_smooth(method = "lm", se = TRUE, color = "black") +
   geom_point(aes(color = Month)) +
   #scale_shape_manual(values = 1:11) + # Months as shapes need to define 11 shapes
-  ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all") +
+  ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all", labeller = labeller(Species = as_labeller(italicize_except_mixture2, label_parsed))) +
   viridis::scale_color_viridis(discrete = T, option = "H") + # If using colors use the colorblind friendly viridis colormap
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte acetylene reduction") +
   theme_bw() +
