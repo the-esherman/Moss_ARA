@@ -21,6 +21,7 @@ library(cowplot)
 library(ggrepel)
 library(ggh4x)
 #library(lme4)
+library(ggtext)
 #
 #
 #
@@ -1566,51 +1567,38 @@ N2_fix.Sph <- vial_15N.2 %>%
 #
 # Plot the AR:N2 ratio of Sphagnum
 ARN2ratio_Sph.plot <- N2_fix.Sph %>%
+  mutate(Species = case_when(Species == "Sphagnum fuscum" ~ "<i>S. fuscum</i>",
+                            Species == "Sphagnum majus" ~ "<i>S. majus</i>",
+                            Species == "Sphagnum mixture" ~ "<i> S.</i> mixture",
+                            TRUE ~ Species)) %>%
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point(aes(shape = Species)) +
   geom_abline(intercept = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[1], slope = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[2], color = "blue", linewidth = 1) +
   geom_smooth(method = "lm", se = FALSE) +
   geom_abline(intercept=0, slope=3.2)+ # Theoretical model relationship of 3:1 AR:N2
   #facet_wrap(~Species) +
-  coord_cartesian(xlim = c(0,40)) + #, ylim = c(-2.5,7)) +
+  coord_cartesian(xlim = c(0,40), ylim = c(-2,7)) +
+  scale_y_continuous(breaks = c(-2, 0, 2, 4, 6)) +
   geom_text(x = 15, y = 4, label = lm_eqn(N2_fix.Sph$N_h_m2, N2_fix.Sph$Et_prod_umol_h_m2), parse = TRUE) +
   annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3.2 %.% italic(x)))), parse = TRUE) + # Text for the theoretical model relationship
-  labs(x = expression("Fixed N (µg "*N[2]~~h^-1~m^-2*")"), y = expression(C[2]*H[4]*" production (µmol  "*h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
+  labs(x = expression("Fixed N (µg "*N[2]~~h^-1~m^-2*")"), y = expression(C[2]*H[4]*" production (µmol  "*h^-1~m^-2*")"), title = expression(italic("Sphagnum ")*N[2]*"-fixation and ethylene production")) +
   theme_classic(base_size = 15) +
-  theme(legend.position = "bottom")
-#
-# The reverse:
-# y = N2-fixed, x = ethylene produced
-N2_fix.Sph %>%
-  ggplot(aes(y = N_h_m2, x = Et_prod_umol_h_m2)) + #, color = Species)) +
-  geom_point(aes(shape = Species)) +
-  geom_smooth(method = "lm", se = FALSE) +
-  geom_abline(intercept=0, slope=1/3)+ # Theoretical model relationship of 3:1 AR:N2
-  #facet_wrap(~Species) +
-  coord_cartesian(ylim = c(0,40)) +
-  geom_text(x = 4, y = 35, label = lm_eqn(vial_15N.2$Et_prod_umol_h_m2, vial_15N.2$N_h_m2), parse = TRUE) +
-  annotate("text", x = 4, y = 6, label = as.character(expression(paste(italic(y) ==  frac(1,3) %.% italic(x)))), parse = TRUE) +
-  labs(y = expression("Fixed nitrogen (µg "*~~N[2]~h^-1~m^-2*")"), x = expression("Ethylene production (µmol  "*C[2]*H[4]~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation and ethylene production")) +
-  theme_classic(base_size = 15) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom", legend.text = element_markdown())
 #
 # Calculate N fixed based on the conversion ratio for the Sphagnum species with non-zero values
 N2fixavg_Sph.plot <- N2_fix.Sph %>%
-  mutate(Species = case_when(Species == "Sphagnum fuscum" ~ "S. fuscum",
-                             Species == "Sphagnum majus" ~ "S. majus",
-                             Species == "Sphagnum mixture" ~ "S. mixture",
+  mutate(Species = case_when(Species == "Sphagnum fuscum" ~ "<i>S. fuscum</i>",
+                             Species == "Sphagnum majus" ~ "<i>S. majus</i>",
+                             Species == "Sphagnum mixture" ~ "<i> S.</i> mixture",
                              TRUE ~ Species)) %>%
   summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Species)) %>%
   ggplot() +
   geom_errorbar(aes(x = Species, y = meanN_fix, ymin=meanN_fix, ymax=meanN_fix+se), position=position_dodge(.9)) +
   geom_col(aes(x = Species, y = meanN_fix), fill = "#35b779") + 
   scale_y_continuous(limits = c(0, 30), breaks = c(0, 5, 10, 15, 20, 25, 30)) +
-  labs(x = element_blank(), y = expression("Fixed N (µg "*~N~~h^-1~m^-2*")"), title = expression("Sphagnum "*N[2]*"-fixation")) + 
+  labs(x = element_blank(), y = expression("Fixed N (µg "*~N~~h^-1~m^-2*")"), title = expression(italic("Sphagnum ")*N[2]*"-fixation")) + 
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"))
-#
-# Combine figures
-plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, align = "h", ncol = 2, rel_widths = c(3, 2), labels = c("a", "b"))
+  theme(panel.spacing = unit(1, "lines"), axis.text.x = element_markdown())
 #
 # Quick conversion
 N2_conv <- N2_fix.Sph %>%
@@ -1624,16 +1612,16 @@ N2_conv <- N2_fix.Sph %>%
 # N fixed based on 15N2
 N2fixavg.plot <- vial_15N.2 %>%
   mutate(Sp = Species,
-         Species = case_when(Species == "Au" ~ "A. turgidum",
-                             Species == "Di" ~ "D. scoparium",
-                             Species == "Hy" ~ "H. splendens",
-                             Species == "Pl" ~ "P. schreberi",
-                             Species == "Po" ~ "P. commune",
-                             Species == "Pti" ~ "P. ciliare",
-                             Species == "Ra" ~ "R. lanuginosum",
-                             Species == "Sf" ~ "S. fuscum",
-                             Species == "Sli" ~ "S. majus",
-                             Species == "S" ~ "S. mixture",
+         Species = case_when(Species == "Au" ~ "<i>A. turgidum</i>",
+                             Species == "Di" ~ "<i>D. scoparium</i>",
+                             Species == "Hy" ~ "<i>H. splendens</i>",
+                             Species == "Pl" ~ "<i>P. schreberi</i>",
+                             Species == "Po" ~ "<i>P. commune</i>",
+                             Species == "Pti" ~ "<i>P. ciliare</i>",
+                             Species == "Ra" ~ "<i>R. lanuginosum</i>",
+                             Species == "Sf" ~ "<i>S. fuscum</i>",
+                             Species == "Sli" ~ "<i>S. majus</i>",
+                             Species == "S" ~ "<i>S. mixture</i>",
                              TRUE ~ Species)) %>%
   filter(Sp != "Sf" & Sp != "Sli" & Sp != "S") %>%
   summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Sp, Species)) %>%
@@ -1651,7 +1639,7 @@ N2fixavg.plot <- vial_15N.2 %>%
   viridis::scale_fill_viridis(discrete = T) +
   labs(x = element_blank(), y = expression("Fixed N (µg "*~N~~h^-1~m^-2*")"), title = expression("Bryophyte "*N[2]*"-fixation")) + 
   theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"), legend.position = "none") #,axis.text.x=element_text(angle=60, hjust=1)
+  theme(panel.spacing = unit(1, "lines"), legend.position = "none", axis.text.x = element_markdown()) #,axis.text.x=element_text(angle=60, hjust=1)
 #
 # To get the BFG colors:
 N2fixavg.plotLegend <- vial_15N.2 %>%
@@ -1674,28 +1662,6 @@ N2fixavg.plotLegend.BFG <- get_plot_component(N2fixavg.plotLegend, "guide-box", 
 top_row <- plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, align = "h", ncol = 2, rel_widths = c(3, 2), labels = c("a", "b"), label_size = 20)
 bottom_row <- plot_grid(N2fixavg.plot, N2fixavg.plotLegend.BFG, ncol = 2, rel_widths = c(4, 1), labels = c("c"), label_size = 20)
 plot_grid(top_row, bottom_row, align = "v", ncol = 1)
-
-
-# first align the top-row plot (p3) with the left-most plot of the
-# bottom row (p1)
-plots <- align_plots(p3, p1, align = 'v', axis = 'l')
-# then build the bottom row
-bottom_row <- plot_grid(plots[[2]], p2, labels = c('B', 'C'), label_size = 12)
-
-# then combine with the top row for final plot
-plot_grid(plots[[1]], bottom_row, labels = c('A', ''), label_size = 12, ncol = 1)
-
-
-
-plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, , , align = "h", ncol = 2, rel_widths = c(4, 2, 4, 1), labels = c("a", "b", "c"))
-
-
-
-# Combine figures
-# Layout of final graph:
-hlay <- rbind(c(1,1,2,2),
-              c(3,3,3,4))
-gridExtra::grid.arrange(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, N2fixavg.plot, N2fixavg.plotLegend.BFG, layout_matrix=hlay)
 
 #
 #
