@@ -158,11 +158,14 @@ italicize_except_mixture <- function(labels) {
 # Modified to also include line break ~ish
 italicize_except_mixture2 <- function(labels) {
   labels <- as.character(labels)  # Ensure labels are characters
+  labelTop <- str_split_i(labels, " ", 1)
+  labelBottom <- str_split_i(labels, " ", 2)
   
   # Modify "Sphagnum mixture" to italicize only "Sphagnum"
   labels <- ifelse(labels == "Sphagnum mixture",
                    "atop(italic('Sphagnum'),textstyle('mixture'))",  # Use plotmath expression
-                   paste0("atop(italic('", strsplit(labels, split = " ")[[1]][1], "'), italic('", strsplit(labels, split = " ")[[1]][2], "'))")) # Italicize all others
+                   paste0("atop(italic('", labelTop, "'), italic('", labelBottom, "'))")) # Italicize all others
+                   #paste0("atop(italic('", strsplit(labels, split = " ")[[1]][1], "'), italic('", strsplit(labels, split = " ")[[1]][2], "'))")) # Italicize all others
   return(labels)
 }
 #
@@ -1184,6 +1187,7 @@ Thesis_ARA_plot <- ARA_circle_seasons %>%
   #guides(fill = guide_legend(nrow = 2, byrow = TRUE)) +
   #coord_polar(start = 0)
   coord_radial(start = 0, end = 1.6*pi, inner.radius = 0.1)
+  #coord_radial(start = -0.8*pi, end = 1.1*pi, inner.radius = 0.1) # to rotate better
 #
 # # Legend as a separate component
 # x_legend <- get_plot_component(x, "guide-box", return_all = TRUE)[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
@@ -1593,6 +1597,7 @@ ARN2ratio_Sph.plot <- N2_fix.Sph %>%
                             Species == "Sphagnum majus" ~ "<i>S. majus</i>",
                             Species == "Sphagnum mixture" ~ "<i> S.</i> mixture",
                             TRUE ~ Species)) %>%
+  mutate(across(Species, ~ factor(.x, levels=c("<i>S. fuscum</i>", "<i>S. majus</i>", "<i> S.</i> mixture")))) %>%
   ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
   geom_point(aes(shape = Species)) +
   geom_abline(intercept = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[1], slope = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[2], color = "blue", linewidth = 1) +
@@ -1613,6 +1618,7 @@ N2fixavg_Sph.plot <- N2_fix.Sph %>%
                              Species == "Sphagnum majus" ~ "<i>S. majus</i>",
                              Species == "Sphagnum mixture" ~ "<i> S.</i> mixture",
                              TRUE ~ Species)) %>%
+  mutate(across(Species, ~ factor(.x, levels=c("<i>S. fuscum</i>", "<i>S. majus</i>", "<i> S.</i> mixture")))) %>%
   summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Species)) %>%
   ggplot() +
   geom_errorbar(aes(x = Species, y = meanN_fix, ymin=meanN_fix, ymax=meanN_fix+se), position=position_dodge(.9)) +
