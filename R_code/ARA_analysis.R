@@ -228,7 +228,7 @@ EM50_Wetland.1 <- EM50_Wetland %>%
 # PAR
 # Split Date_time into date and time
 PAR_CC <- PAR_CC %>%
-  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Tid")) %>%
+  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Tid"), too_few = "debug", too_many = "debug") %>%
   mutate(Date = ymd(Date),
          Tid = hms::as_hms(Tid)) %>%
   rename("PAR.cc" = PAR)
