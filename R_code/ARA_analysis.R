@@ -1006,7 +1006,7 @@ field_ARA_wide.5 %>%
   facet_wrap(~Species, scales = "free", ncol = 4, labeller = labeller(Species = as_labeller(italicize_except_mixture, label_parsed))) + # italicize most, but not the "mixture" in Sphagnum mixture
   viridis::scale_fill_viridis(discrete = T) +
   scale_x_discrete(labels = measuringPeriod) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")")) + #, title = expression("Ethylene production in chambers")) + 
   # Specify y-axes scales so that some species match
   facetted_pos_scales(
     y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 0.7)), # change breaks by adding: breaks = seq(0, x, xx, xxx)),
@@ -1282,7 +1282,7 @@ ARA_vialRound.basic %>%
   geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
   facet_wrap(~Species, scales = "free", ncol = 4, labeller = labeller(Species = as_labeller(italicize_except_mixture, label_parsed))) + # italicize most, but not the "mixture" in Sphagnum mixture
   viridis::scale_fill_viridis(discrete = T) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials")) + 
+  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Ethylene production in vials")) + 
   # Specify y-axes scales so that some species match
   facetted_pos_scales(
     y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 1.7)),
@@ -1433,9 +1433,10 @@ field_ARA.plot.long %>%
   #geom_smooth(method = "lm", se = TRUE, color = "black") +
   geom_point(aes(color = Month)) +
   #scale_shape_manual(values = 1:11) + # Months as shapes need to define 11 shapes
-  ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all", labeller = labeller(Species = as_labeller(italicize_except_mixture2, label_parsed))) +
+  ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all", labeller = labeller(Species = as_labeller(italicize_except_mixture2, label_parsed)),
+                     strip = strip_themed()) +
   viridis::scale_color_viridis(discrete = T, option = "H") + # If using colors use the colorblind friendly viridis colormap
-  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte acetylene reduction") +
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")")) + #, title = "Bryophyte acetylene reduction") +
   theme_bw() +
   theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1)) +
   guides(col = guide_legend(nrow = 1)) # For colors all in one row
