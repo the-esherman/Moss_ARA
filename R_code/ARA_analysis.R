@@ -1434,7 +1434,7 @@ field_ARA.plot.long %>%
   geom_point(aes(color = Month)) +
   #scale_shape_manual(values = 1:11) + # Months as shapes need to define 11 shapes
   ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all", labeller = labeller(Species = as_labeller(italicize_except_mixture2, label_parsed)),
-                     strip = strip_themed()) +
+                     strip = strip_themed(background_x = elem_list_rect(fill = alpha(c("#21918c", "#90d743", "#fde725", "#fde725", "#31688e", "#443983", "#440154", "#35b779", "#35b779", "#35b779"), 0.5)))) +
   viridis::scale_color_viridis(discrete = T, option = "H") + # If using colors use the colorblind friendly viridis colormap
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")")) + #, title = "Bryophyte acetylene reduction") +
   theme_bw() +
