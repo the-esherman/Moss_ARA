@@ -1023,6 +1023,10 @@ field_ARA_wide.5 %>%
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x = element_text(angle = 60, hjust = 1))
 #
+# Save graph as EPS or TIF
+# ggsave("ARA_field_BFG_cb_wide9.1.eps", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
+# ggsave("ARA_field_BFG_cb_wide9.1.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
+#
 #
 # Alternative version: As a continuous scale
 field_ARA.period_simple <- field_ARA.period %>%
@@ -1298,6 +1302,10 @@ ARA_vialRound.basic %>%
   ) +
   theme_classic(base_size = 15) +
   theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
+#
+# Save graph as EPS or TIF
+# ggsave("ARA_vialField_BFG_viridis_wide7.1.eps", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
+# ggsave("ARA_vialField_BFG_viridis_wide7.1.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
 #
 #
 # Vials in climate chamber
