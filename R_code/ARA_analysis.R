@@ -228,9 +228,12 @@ EM50_Wetland.1 <- EM50_Wetland %>%
 # PAR
 # Split Date_time into date and time
 PAR_CC <- PAR_CC %>%
-  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Tid"), too_few = "debug", too_many = "debug") %>%
+  mutate(Date_time = Date_time + seconds()) %>% 
+  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Tid")) %>%
   mutate(Date = ymd(Date),
          Tid = hms::as_hms(Tid)) %>%
+  mutate(Tid = Tid - hms::as_hms(1)) %>%
+  mutate(Tid = hms::as_hms(Tid)) %>%
   rename("PAR.cc" = PAR)
 #
 # Air temperature
@@ -1449,6 +1452,38 @@ field_ARA.plot.long %>%
   theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1)) +
   guides(col = guide_legend(nrow = 1)) # For colors all in one row
   #guides(shape = guide_legend(nrow = 1)) # For all shapes in one row
+#
+# Selected species:
+# H. splendens, P. commune, S. majus
+field_ARA.plot.long %>%
+  mutate(Driver = case_when(Driver == "AirT_C" ~ "Air temperature",
+                            Driver == "Soil_moisture" ~ "Soil moisture",
+                            Driver == "Soil_temperature" ~ "Soil temperature",
+                            TRUE ~ Driver),
+         Species = case_when(Sp == "Au" ~ "Aulacomnium turgidum",
+                             Sp == "Di" ~ "Dicranum scoparium",
+                             Sp == "Hy" ~ "Hylocomium splendens",
+                             Sp == "Pl" ~ "Pleurozium schreberi",
+                             Sp == "Po" ~ "Polytrichum commune",
+                             Sp == "Pti" ~ "Ptilidium ciliare",
+                             Sp == "Ra" ~ "Racomitrium lanuginosum",
+                             Sp == "Sf" ~ "Sphagnum fuscum",
+                             Sp == "Sm" ~ "Sphagnum majus",
+                             Sp == "S" ~ "Sphagnum mixture",
+                             TRUE ~ Species)) %>%
+  filter(Sp == "Hy" | Sp == "Po" | Sp == "Sm") %>%
+  ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
+  geom_point(aes(color = Month)) +
+  #scale_shape_manual(values = 1:11) + # Months as shapes need to define 11 shapes
+  ggh4x::facet_grid2(Driver ~ Species, scales = "free", independent = "all", labeller = labeller(Species = as_labeller(italicize_except_mixture2, label_parsed)),
+                     strip = strip_themed(background_x = elem_list_rect(fill = alpha(c("#fde725", "#31688e", "#35b779"), 0.5)))) +
+  viridis::scale_color_viridis(discrete = T, option = "H") + # If using colors use the colorblind friendly viridis colormap
+  labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")")) + #, title = "Bryophyte acetylene reduction") +
+  theme_bw() +
+  theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1)) +
+  guides(col = guide_legend(nrow = 1)) # For colors all in one row
+#guides(shape = guide_legend(nrow = 1)) # For all shapes in one row
+
 #
 #
 #
