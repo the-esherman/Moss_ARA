@@ -1471,7 +1471,7 @@ field_ARA.plot.long %>%
                              Sp == "Sm" ~ "Sphagnum majus",
                              Sp == "S" ~ "Sphagnum mixture",
                              TRUE ~ Species)) %>%
-  filter(Sp == "Hy" | Sp == "Po" | Sp == "Sm") %>%
+  filter(Sp == "Pl" | Sp == "Po" | Sp == "Sm") %>%
   ggplot(aes(x = Environmental, y = Et_prod_umol_h_m2)) +
   geom_point(aes(color = Month)) +
   #scale_shape_manual(values = 1:11) + # Months as shapes need to define 11 shapes
