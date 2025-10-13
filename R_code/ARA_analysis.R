@@ -22,8 +22,6 @@ library(ggtext)
 #
 #
 #=======  ♠   Load data     ♠ =======
-# Import ID of 15N data
-ID_15N <- read_csv("Data_clean/ID_15N.csv", col_types = "ccccnncc")
 #
 #    ╔═══════╗
 # -- • Field • --
@@ -589,42 +587,6 @@ vial_ARA_climateChamber <- vial_ARA.3 %>%
   filter(Round == "A5" | Round == "B5" | Round == "C5") %>%
   left_join(vial_moisture.CC, by = join_by(Block, Species, Round)) %>%
   relocate(GWC, .before = Et_prod_umol_h_m2)
-#
-#
-#
-#------- • 15N data -------
-#
-#
-# 15N data ID
-ID_15N <- ID_15N %>%
-  mutate(across(Date, ~ymd(.x))) %>%
-  select(!c(Sample_ID, Time_nr))
-#
-# Combine 15N data with the ethylene production from the same period.
-# Useless, since climate chamber data is 0 for everything but the Sphagnum species
-vial_15N.2 <- vial_ARA.3 %>% 
-  filter(Round == "C5") %>%
-  select(Block, Species, Habitat, Et_prod_umol_h_m2) %>%
-  left_join(ID_15N, by = join_by(Block, Species)) %>%
-  relocate(Et_prod_umol_h_m2, .after = Time_T1) %>%
-  left_join(vial_15N, by = join_by(Block, Species)) %>%
-  # µg 15N g-1 DW * g DW = µg 15N
-  mutate(Excess_15N = N15_pr_DW*Vial_sample_DW) %>%
-  # µg 15N / µg 15N pr µg N injected = µg N fixed pr sample!
-  mutate(Fixed_N = Excess_15N/0.98) %>% # 98% 15N2 used
-  # µg N pr h pr m2 (assuming 24h incubation)
-  mutate(N_h_m2 = Fixed_N/Vial_sample_area_m2/24,
-         N15_h_m2 = Excess_15N/Vial_sample_area_m2/24) %>%
-  mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N,
-         ARA_ratio = Et_prod_umol_h_m2/N_h_m2)
-
-vial_15N.avg <- vial_15N.2 %>%
-  group_by(Species) %>%
-  summarise(Et_prod_umol_h_m2 = mean(Et_prod_umol_h_m2, na.rm = TRUE),
-            Fixed_N = mean(Fixed_N, na.rm = TRUE),
-            N_h_m2 = mean(N_h_m2, na.rm = TRUE)) %>%
-  ungroup() %>%
-  mutate(ARA_ratio = Et_prod_umol_h_m2/Fixed_N)
 #
 #
 #
@@ -1616,121 +1578,6 @@ vial_ARA_CC.plot.long %>%
   labs(x = "Environmental driver", y = expression("Ethylene production (µmol  "*~~h^-1*" "*m^-2*")"), title = "Bryophyte AR in vials in climate chamber") +
   theme_bw(base_size = 15) +
   theme(legend.position = "bottom", axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-#-------  ♪   N2 fixation   ♪ -------
-#
-# Regression plot of N2-fixation and ethylene production 
-# Only for ethylene production values greater than 0
-# The only species that had positive ethylene production were the three sphagnum species
-N2_fix.Sph <- vial_15N.2 %>%
-  filter(Et_prod_umol_h_m2 > 0) %>% # Remove values below detection limit
-  mutate(Species = case_when(Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum mixture",
-                             TRUE ~ Species))
-#
-# Plot the AR:N2 ratio of Sphagnum
-ARN2ratio_Sph.plot <- N2_fix.Sph %>%
-  mutate(Species = case_when(Species == "Sphagnum fuscum" ~ "<i>S. fuscum</i>",
-                            Species == "Sphagnum majus" ~ "<i>S. majus</i>",
-                            Species == "Sphagnum mixture" ~ "<i> S.</i> mixture",
-                            TRUE ~ Species)) %>%
-  mutate(across(Species, ~ factor(.x, levels=c("<i>S. fuscum</i>", "<i>S. majus</i>", "<i> S.</i> mixture")))) %>%
-  ggplot(aes(x = N_h_m2, y = Et_prod_umol_h_m2)) + #, color = Species)) +
-  geom_point(aes(shape = Species)) +
-  geom_abline(intercept = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[1], slope = coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[2], color = "blue", linewidth = 1) +
-  geom_smooth(method = "lm", se = FALSE) +
-  geom_abline(intercept=0, slope=3.2)+ # Theoretical model relationship of 3:1 AR:N2
-  #facet_wrap(~Species) +
-  coord_cartesian(xlim = c(0,40), ylim = c(-2,7)) +
-  scale_y_continuous(breaks = c(-2, 0, 2, 4, 6)) +
-  geom_text(x = 15, y = 4, label = lm_eqn(N2_fix.Sph$N_h_m2, N2_fix.Sph$Et_prod_umol_h_m2), parse = TRUE) +
-  annotate("text", x = 6, y = 6, label = as.character(expression(paste(italic(y) ==  3.2 %.% italic(x)))), parse = TRUE) + # Text for the theoretical model relationship
-  labs(x = expression("Fixed N (µg "*N[2]~~h^-1~m^-2*")"), y = expression(C[2]*H[4]*" production (µmol  "*h^-1~m^-2*")"), title = expression(italic("Sphagnum ")*N[2]*"-fixation and ethylene production")) +
-  theme_classic(base_size = 15) +
-  theme(legend.position = "bottom", legend.text = element_markdown())
-#
-# Calculate N fixed based on the conversion ratio for the Sphagnum species with non-zero values
-N2fixavg_Sph.plot <- N2_fix.Sph %>%
-  mutate(Species = case_when(Species == "Sphagnum fuscum" ~ "<i>S. fuscum</i>",
-                             Species == "Sphagnum majus" ~ "<i>S. majus</i>",
-                             Species == "Sphagnum mixture" ~ "<i> S.</i> mixture",
-                             TRUE ~ Species)) %>%
-  mutate(across(Species, ~ factor(.x, levels=c("<i>S. fuscum</i>", "<i>S. majus</i>", "<i> S.</i> mixture")))) %>%
-  summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Species)) %>%
-  ggplot() +
-  geom_errorbar(aes(x = Species, y = meanN_fix, ymin=meanN_fix, ymax=meanN_fix+se), position=position_dodge(.9)) +
-  geom_col(aes(x = Species, y = meanN_fix), fill = "#35b779") + 
-  scale_y_continuous(limits = c(0, 30), breaks = c(0, 5, 10, 15, 20, 25, 30)) +
-  labs(x = element_blank(), y = expression("Fixed N (µg "*~N~~h^-1~m^-2*")"), title = expression(italic("Sphagnum ")*N[2]*"-fixation")) + 
-  theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x = element_markdown())
-#
-# Quick conversion
-N2_conv <- N2_fix.Sph %>%
-  mutate(N2fix_conv_µmol_m2_h = Et_prod_umol_h_m2*coef(lm(N2_fix.Sph$Et_prod_umol_h_m2 ~ N2_fix.Sph$N_h_m2))[2],
-         N2fix_conv_µmol_m2_day = N2fix_conv_µmol_m2_h*24) %>%
-  # µmol N pr g pr day = µg N pr h pr m2 * m2 pr sample
-  mutate(N_µmol_day_m2 = (N_h_m2*Vial_sample_area_m2)/Vial_sample_DW * 24 /14.006) %>%
-  mutate(N_nmol_day_m2 = N_µmol_day_m2 * 1000) %>%
-  mutate(logNnmol = log(N_nmol_day_m2+1))
-#
-# N fixed based on 15N2
-N2fixavg.plot <- vial_15N.2 %>%
-  mutate(Sp = Species,
-         Species = case_when(Species == "Au" ~ "<i>A. turgidum</i>",
-                             Species == "Di" ~ "<i>D. scoparium</i>",
-                             Species == "Hy" ~ "<i>H. splendens</i>",
-                             Species == "Pl" ~ "<i>P. schreberi</i>",
-                             Species == "Po" ~ "<i>P. commune</i>",
-                             Species == "Pti" ~ "<i>P. ciliare</i>",
-                             Species == "Ra" ~ "<i>R. lanuginosum</i>",
-                             Species == "Sf" ~ "<i>S. fuscum</i>",
-                             Species == "Sli" ~ "<i>S. majus</i>",
-                             Species == "S" ~ "<i>S. mixture</i>",
-                             TRUE ~ Species)) %>%
-  filter(Sp != "Sf" & Sp != "Sli" & Sp != "S") %>%
-  summarise(meanN_fix = mean(N_h_m2, na.rm = TRUE), se = sd(N_h_m2)/sqrt(length(N_h_m2)), .by = c(Sp, Species)) %>%
-  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
-                         Sp == "Di" ~ "Tall unbranched turf",
-                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
-                         Sp == "Po" ~ "Polytrichales",
-                         Sp == "Pti" ~ "Leafy liverwort",
-                         Sp == "Ra" ~ "Large cushion",
-                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
-  ggplot() +
-  geom_errorbar(aes(x = Species, y = meanN_fix, ymin=meanN_fix, ymax=meanN_fix+se), position=position_dodge(.9)) +
-  geom_col(aes(x = Species, y = meanN_fix, fill = BFG)) +
-  scale_y_continuous(limits = c(0, 30), breaks = c(0, 5, 10, 15, 20, 25, 30)) +
-  viridis::scale_fill_viridis(discrete = T) +
-  labs(x = element_blank(), y = expression("Fixed N (µg "*~N~~h^-1~m^-2*")"), title = expression("Bryophyte "*N[2]*"-fixation")) + 
-  theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines"), legend.position = "none", axis.text.x = element_markdown()) #,axis.text.x=element_text(angle=60, hjust=1)
-#
-# To get the BFG colors:
-N2fixavg.plotLegend <- vial_15N.2 %>%
-  mutate(Sp = Species) %>%
-  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
-                         Sp == "Di" ~ "Tall unbranched turf",
-                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
-                         Sp == "Po" ~ "Polytrichales",
-                         Sp == "Pti" ~ "Leafy liverwort",
-                         Sp == "Ra" ~ "Large cushion",
-                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
-  ggplot() +
-  geom_col(aes(x = Species, y = N_h_m2, fill = BFG)) + 
-  viridis::scale_fill_viridis(discrete = T) +
-  theme_classic(base_size = 15)
-#
-N2fixavg.plotLegend.BFG <- get_plot_component(N2fixavg.plotLegend, "guide-box", return_all = TRUE)[[1]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
-#
-# Plot top and bottom row and combine
-top_row <- plot_grid(ARN2ratio_Sph.plot, N2fixavg_Sph.plot, align = "h", ncol = 2, rel_widths = c(3, 2), labels = c("a", "b"), label_size = 20)
-bottom_row <- plot_grid(N2fixavg.plot, N2fixavg.plotLegend.BFG, ncol = 2, rel_widths = c(4, 1), labels = c("c"), label_size = 20)
-plot_grid(top_row, bottom_row, align = "v", ncol = 1)
-
 #
 #
 #
