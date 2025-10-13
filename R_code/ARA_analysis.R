@@ -122,18 +122,6 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
   return(datac)
 }
 #
-# From https://stackoverflow.com/a/7549819
-# Get linear equation and R2 for plot
-lm_eqn <- function(x, y) {
-  m <- lm(y ~ x);
-  eq <- substitute(atop(italic(y) == a + b %.% italic(x), italic(R)^2~"="~R2*","~~italic(p)~"="~pvalue),
-                   list(a = format(unname(coef(m)[1]), digits = 2),
-                        b = format(unname(coef(m)[2]), digits = 2),
-                        R2 = format(summary(m)$r.squared, digits = 3),
-                        pvalue = ifelse(summary(m)$coefficients[2,4] < 0.001, "< 0.001", format(summary(m)$coefficients[2,4], digits = 2))))
-  as.character(as.expression(eq));
-}
-#
 # Custom labeller function to italicize most, but not the "mixture" in Sphagnum mixture
 italicize_except_mixture <- function(labels) {
   labels <- as.character(labels)  # Ensure labels are characters
