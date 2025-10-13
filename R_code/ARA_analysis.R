@@ -58,11 +58,6 @@ Ch_area_m2 <- (Ch_r^2*pi)/10000 # Chamber area in m2
 #
 # Import vial dataset
 vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
-vial_15N <- read_csv("Data_clean/vial_15N.csv", col_names = TRUE)
-#
-# Climate chamber environmental parameters
-AirT_CC <- read_csv("Data_clean/AirT_CC.csv", col_names = TRUE)
-PAR_CC <- read_csv("Data_clean/PAR_CC.csv", col_names = TRUE)
 #
 # Vial moisture
 vial_moisture <- read_csv("Data_clean/vial_moisture.csv", col_names = TRUE)
@@ -215,31 +210,9 @@ EM50_Wetland.1 <- EM50_Wetland %>%
   filter(!is.na(Soil_moisture_M) & !is.na(Soil_temperature_M))
 #
 #
-#    ╔═══════════════════════════════╗
-# -- • Climate chamber environmental • --
-#    ╚═══════════════════════════════╝
-#
-# PAR
-# Split Date_time into date and time
-PAR_CC <- PAR_CC %>%
-  mutate(Date_time = Date_time + seconds()) %>% 
-  separate_wider_delim(Date_time, delim = " ", names = c("Date", "Tid")) %>%
-  mutate(Date = ymd(Date),
-         Tid = hms::as_hms(Tid)) %>%
-  mutate(Tid = Tid - hms::as_hms(1)) %>%
-  mutate(Tid = hms::as_hms(Tid)) %>%
-  rename("PAR.cc" = PAR)
-#
-# Air temperature
-# Use vial measurements
-# during one period 2 vials were used, as they were blind test. Average temperature of both
-AirT_CC <- AirT_CC %>%
-  filter(location == "vial") %>%
-  select(Date, Time, AirT_C) %>%
-  group_by(Date, Time) %>%
-  summarise(AirT_C.cc = mean(AirT_C, na.rm = T)) %>%
-  ungroup() %>%
-  rename("Tid" = Time)
+#    ╔═════════════════════════╗
+# -- • Vial environmental data • --
+#    ╚═════════════════════════╝
 #
 # Vial moisture
 vial_moisture <- vial_moisture %>%
@@ -249,13 +222,6 @@ vial_moisture <- vial_moisture %>%
 # Vial field
 vial_moisture.field <- vial_moisture %>%
   mutate(Round = str_to_upper(Time_nr)) %>% # Add round
-  relocate(Round, .after = Species) %>%
-  select(!Time_nr)
-#
-# Vial climate chamber
-# Note that this is identical, but for the climate chamber
-vial_moisture.CC <- vial_moisture %>%
-  mutate(Round = str_c(str_to_upper(Time_nr), "5")) %>% # Add round, but note that for climate chamber rounds add a "5"
   relocate(Round, .after = Species) %>%
   select(!Time_nr)
 #
@@ -459,6 +425,7 @@ field_ARA_wide.5 <- field_ARA_wide.4 %>%
 vial_ARA.1 <- vial_ARA %>%
   mutate(Species = str_replace_all(Species, "M", "B")) %>% #Replace M for Myren/mire with B for Blank
   filter(!str_starts(Species, "v")) %>% #Remove vial tests
+  filter(!str_ends(Round, "5")) %>% #Remove climate chamber vials as the data is unreliable
   select(!Temp_approx_C)
 #
 # Blanks
@@ -508,14 +475,6 @@ vial_ARA.period <- vial_ARA.2 %>%
                               Round == "A" & Date == ymd("2021-02-15") | Round == "A" & Date == ymd("2021-02-16") ~ "A_2",
                               Round == "B" & Date == ymd("2021-03-30") | Round == "B" & Date == ymd("2021-03-31") & Start == hms::as_hms("16:00:00") ~ "B_1",
                               Round == "B" & Date == ymd("2021-03-31") & Start == hms::as_hms("11:00:00") | Round == "B" & Date == ymd("2021-04-01") ~ "B_2",
-                              # ↑ 
-                              # Field
-                              # Climate chamber
-                              # ↓ 
-                              Round == "A5" & Date == ymd("2021-02-12") | Round == "A5" & Date == ymd("2021-02-13") ~ "A5_1",
-                              Round == "A5" & Date == ymd("2021-02-16") | Round == "A5" & Date == ymd("2021-02-17") ~ "A5_2",
-                              Round == "B5" & Date == ymd("2021-03-31") | Round == "B5" & Date == ymd("2021-04-01") & Start == hms::as_hms("20:00:00") ~ "B5_1",
-                              Round == "B5" & Date == ymd("2021-04-01") & Start == hms::as_hms("14:00:00") | Round == "B5" & Date == ymd("2021-04-02") ~ "B5_2",
                               TRUE ~ Round))
 #
 # Average environmental data for the time period
@@ -528,23 +487,16 @@ environ_vial <- reduce(list(EM50_Heath.1, EM50_Wetland.1, AirT_wetland.1, AirT_h
                          Date > ymd("20220327") ~ Tid+hms::hms(3600),
                          TRUE ~ Tid)) %>%
   mutate(AirT_h = if_else(is.na(AirT_h), AirT_C, AirT_h)) %>% # As the last couple of heathland tinytags were not logged, use air temperature from wetland
-  left_join(PAR_CC, by = join_by(Date, Tid)) %>%
-  left_join(AirT_CC, by = join_by(Date, Tid)) %>%
   left_join(vial_ARA.period, by = join_by(Date), multiple = "all") %>%
   filter(!is.na(Round)) %>%
   mutate(Date_time = ymd(Date) + hms(Tid)) %>%
   group_by(Roundsub) %>%
   filter(Date_time >= DateStart & Date_time <= DateEnd) %>%
-  summarise(PAR.field = mean(PAR, na.rm = T),
+  summarise(PAR = mean(PAR, na.rm = T),
             PAR_M = mean(PAR_M, na.rm = T),
             AirT_h = mean(AirT_h, na.rm = T),
-            AirT_C.field = mean(AirT_C, na.rm = T),
-            PAR.cc = mean(PAR.cc, na.rm = T),
-            AirT_C.cc = mean(AirT_C.cc, na.rm = T)) %>%
-  ungroup() %>%
-  mutate(PAR = if_else(str_detect(Roundsub, "5"), PAR.cc, PAR.field),
-         AirT_C = if_else(str_detect(Roundsub, "5"), AirT_C.cc, AirT_C.field)) %>%
-  select(!c(PAR.field, AirT_C.field, PAR.cc, AirT_C.cc))
+            AirT_C = mean(AirT_C, na.rm = T)) %>%
+  ungroup()
 #
 # Combine environmental data with vial data and calculate ethylene production
 vial_ARA.3 <- vial_ARA.2 %>%
@@ -552,19 +504,11 @@ vial_ARA.3 <- vial_ARA.2 %>%
                               Date == ymd("2021-02-15") ~ "A_2",
                               Date == ymd("2021-03-30") ~ "B_1",
                               !str_detect(Round, "5") & Date == ymd("2021-03-31") ~ "B_2",
-                              # ↑ 
-                              # Field
-                              # Climate chamber
-                              # ↓ 
-                              str_detect(Round, "5") & Date == ymd("2021-02-12") ~ "A5_1",
-                              str_detect(Round, "5") & Date == ymd("2021-02-16") ~ "A5_2",
-                              str_detect(Round, "5") & Date == ymd("2021-03-31") ~ "B5_1",
-                              str_detect(Round, "5") & Date == ymd("2021-04-01") ~ "B5_2",
                               TRUE ~ Round)) %>%
   relocate(Roundsub, .after = Round) %>%
   left_join(environ_vial, by = join_by(Roundsub)) %>%
-  mutate(PAR = if_else(str_detect(Roundsub, "5"), PAR, if_else(Species == "S" | Species == "Sf" | Species == "Sli", PAR_M, PAR)),
-         AirT_C = if_else(str_detect(Roundsub, "5"), AirT_C, if_else(Species == "S" | Species == "Sf" | Species == "Sli", AirT_C, AirT_h))) %>%
+  mutate(PAR = if_else(Species == "S" | Species == "Sf" | Species == "Sli", PAR_M, PAR),
+         AirT_C = if_else(Species == "S" | Species == "Sf" | Species == "Sli", AirT_C, AirT_h)) %>%
   select(!c(PAR_M, AirT_h)) %>%
   mutate(Et_prod_umol_h_m2 = Corr_Et_prod_pr_h * (Vial_vol_L * p) / (R_const * (AirT_C+273)) / Vial_area_m2) %>%
   # Ethylene production is either greater than 0 or 0. No negative values
@@ -577,15 +521,6 @@ vial_ARA.3 <- vial_ARA.2 %>%
 vial_ARA_field <- vial_ARA.3 %>%
   filter(Round == "A" | Round == "B" | Round == "C") %>%
   left_join(vial_moisture.field, by = join_by(Block, Species, Round)) %>%
-  relocate(GWC, .before = Et_prod_umol_h_m2)
-#
-#    ╔═══════════════════════╗
-# -- • Climate chamber vials • --
-#    ╚═══════════════════════╝
-#
-vial_ARA_climateChamber <- vial_ARA.3 %>%
-  filter(Round == "A5" | Round == "B5" | Round == "C5") %>%
-  left_join(vial_moisture.CC, by = join_by(Block, Species, Round)) %>%
   relocate(GWC, .before = Et_prod_umol_h_m2)
 #
 #
@@ -764,46 +699,6 @@ plot(residuals(model_vial.env))
 # mean value per measuring period per species
 vial.field.means <- summarySE(data = Qvial_ARA.field, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
 vial.GWC.means <- summarySE(data = Qvial_ARA.field, measurevar = "GWC", groupvars = c("Species", "Round"))
-#
-#
-#       ╔═════════════════════╗
-# -- »»» Climate chamber vials ««« --
-#       ╚═════════════════════╝
-#
-Qvial_ARA.CC <- vial_ARA_climateChamber %>%
-  mutate(across(Round, ~as.character(.x))) %>%
-  mutate(across(c(Block, Species, Round), ~as.factor(.x)))
-#
-# Transform data
-Qvial_ARA.CC <- Qvial_ARA.CC %>%
-  select(1:2, 4, Et_prod_umol_h_m2, PAR, AirT_C, GWC) %>%
-  mutate(logEt_prod = log(Et_prod_umol_h_m2+5),
-         sqrtEt_prod = sqrt(Et_prod_umol_h_m2),
-         cubeEt_prod = Et_prod_umol_h_m2^(1/9),
-         sqEt_prod = Et_prod_umol_h_m2^2,
-         ashinEt_prod = log(Et_prod_umol_h_m2 + sqrt(Et_prod_umol_h_m2^2 + 1)), # inverse hyperbolic sine transformation
-         arcEt_prod = asin(sqrt(((Et_prod_umol_h_m2)/10000))),
-         AirT_C = AirT_C+273)
-#
-# Graph without 0 values to see distribution with transformation
-Qvial_ARA.CC %>%
-  filter(Et_prod_umol_h_m2 != 0) %>%
-  #  ggplot(aes(x = Round, y = (Et_prod_umol_h_m2))) + geom_point()
-  ggplot(aes(x = sqrt(Et_prod_umol_h_m2))) + geom_histogram()
-# removing 0's and using square-root transformation gives something closer to a normal distribution
-#
-# Model - glmmTMB
-# Given the possibility of zero inflation a generalized linear mixed effects model using the glmmTMB package was used
-model_vial.CC <- glmmTMB(sqrtEt_prod ~ Round*Species, data=Qvial_ARA.CC, ziformula=~1, family=gaussian)
-Anova(model_vial.CC, type = c("II"), test.statistic = c("Chi"), component = "cond")
-emmeans(model_vial.CC, ~ Species*Round)
-#
-# Environmental - GWC
-model_vial.gwc <- glmmTMB(sqrtEt_prod ~ GWC*Species, data=Qvial_ARA.CC, ziformula=~1, family=gaussian)
-Anova(model_vial.gwc, type = c("II"), test.statistic = c("Chi"), component = "cond")
-#
-# mean value per measuring period per species
-vial.CC.means <- summarySE(data = Qvial_ARA.CC, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round"))
 #
 #
 #
