@@ -810,15 +810,6 @@ vial.CC.means <- summarySE(data = Qvial_ARA.CC, measurevar = "Et_prod_umol_h_m2"
 #=======  ♫♫  Graphs        ♫♫ =======
 #-------  ♪   Environmental ♪ -------
 #
-# Moisture from three different loggers
-EM50_Heath %>%
-  ggplot() +
-  geom_point(aes(x = Date_time, y = Soil_moisture_B), colour = "#0072B2") +
-  #geom_point(aes(x = Date_time, y = Soil_moisture_P), colour = "#CC79A7") +
-  geom_point(aes(x = Date_time, y = Soil_moisture_R), colour = "#D55E00") +
-  #geom_point(aes(x = Date_time, y = Soil_moisture_W), colour = "#009E73") +
-  geom_point(aes(x = Date_time, y = Soil_moisture_Y), colour = "#F0E442")
-#
 # GWC graph
 vial_ARA_field %>%
   mutate(Sp = Species,
@@ -915,30 +906,7 @@ measuringPeriod <- c("Sep",	"Oct",	"Nov",	"Feb",	"Mar",	"May",	"Jun",	"Jul",	"Se
 # -- ♪ ♪ Field chambers ♪ ♪ --
 #      ╚════════════════╝
 #
-# A grayscale graph
-field_ARA_wide.5 %>%
-  mutate(Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
-                             Species == "Di" ~ "Dicranum scoparium",
-                             Species == "Hy" ~ "Hylocomium splendens",
-                             Species == "Pl" ~ "Pleurozium schreberi",
-                             Species == "Po" ~ "Polytrichum commune",
-                             Species == "Pti" ~ "Ptilidium ciliare",
-                             Species == "Ra" ~ "Racomitrium lanuginosum",
-                             Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum mixture",
-                             TRUE ~ Species)) %>%
-  mutate(across(Month, ~ factor(.x, levels=c("Sept20", "Oct20", "Nov20", "Feb21", "Mar21", "May21", "Jun21", "Jul21", "Sept21", "Oct21", "Nov21")))) %>%
-  summarise(meanEt_pro = mean(Et_prod_umol_h_m2, na.rm = TRUE), se = sd(Et_prod_umol_h_m2)/sqrt(length(Et_prod_umol_h_m2)), .by = c(Month, Species)) %>%
-  ggplot() +
-  geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
-  geom_col(aes(x = Month, y = meanEt_pro), color = "black") + 
-  facet_wrap(~Species, scales = "free", ncol = 2) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
-  theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# Same graph as before, but with functional groups coloured in
+# Functional groups
 field_ARA_wide.5 %>%
   mutate(Sp = Species,
          Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
@@ -1039,6 +1007,9 @@ field_ARA_sum %>%
   theme_classic(base_size = 15) +
   theme(legend.position = "bottom", panel.spacing = unit(1, "lines"), axis.text.x = element_text(angle = 60, hjust = 1))
 #
+#
+#
+# Thesis work circular graph
 #
 # Measuring period with NA
 measuringPeriod.circle <- c("2020\nSep",	"Oct",	"Nov", "Dec", "2021\nJan",	"Feb",	"Mar", "Apr",	"May",	"Jun",	"Jul", "Aug",	"Sep",	"Oct",	"Nov")
@@ -1677,28 +1648,27 @@ plot_ly(field_ARA_wide.4_species, x = ~Au, y = ~Round, name = "Aulacomnium turgi
 x <- field_ARA_wide %>%
   mutate(Acet_diff = Acet_conc_ppm_T0 - Acet_conc_ppm_T1) %>%
   filter(Acet_diff <= 0)
-
-
+#
+#
 y <- field_ARA_wide %>%
   mutate(Ethyl_diff = Ethyl_conc_ppm_T0 - Ethyl_conc_ppm_T1) %>%
   filter(Ethyl_diff <= 0)
-
-
+#
+#
 z <- field_ARA_wide.4 %>%
   mutate(Et_prod_pos = Et_prod_umol_h_m2 >= 0)
 z.N <- z %>%
   filter(!Et_prod_pos)
 z.P <- z %>%
   filter(Et_prod_pos)
-
+#
 z.N %>% count(Round)
 z.P %>% count(Round)
-
+#
 z.N %>% count(Species)
 z.P %>% count(Species)
-
-
-
+#
+#
 # Check if any moss colony never does N2-fixation
 emptyBryophyte <- field_ARA_wide.5 %>%
   select(Block, Species, Round, Et_prod_umol_h_m2) %>%
@@ -1737,7 +1707,6 @@ field_ARA_wide.5 %>%
   filter(Block != "R" | Species != "Sf") %>%
   filter(Block != "W" | Species != "Po") %>%
   filter(Block != "Y" | Species != "Di")
-
 #
 #
 #
