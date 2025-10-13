@@ -871,20 +871,9 @@ field.basic <- field_ARA_wide.5 %>%
   rename("Et_prod_field" = Et_prod_umol_h_m2)
 #
 # Vials in the field
-vial_field.basic <- vial_ARA_field %>%
+vial.basic <- vial_ARA_field %>%
   select(Block, Species, Round, Et_prod_umol_h_m2) %>%
-  rename("Et_prod_vial.Field" = Et_prod_umol_h_m2)
-#
-# Vials in the climate chamber
-vial_cc.basic <- vial_ARA_climateChamber  %>%
-  select(Block, Species, Round, Et_prod_umol_h_m2) %>%
-  rename("Et_prod_vial.CC" = Et_prod_umol_h_m2) %>%
-  mutate(Round = case_when(Round == "A5" ~ "A",
-                           Round == "B5" ~ "B",
-                           Round == "C5" ~ "C"))
-#
-# Combine vial results
-vial.basic <- left_join(vial_field.basic, vial_cc.basic, by = join_by(Block, Species, Round)) %>%
+  rename("Et_prod_vial.Field" = Et_prod_umol_h_m2) %>%
   mutate(Round = case_when(Round == "A" ~ 4,
                            Round == "B" ~ 5,
                            Round == "C" ~ 8))
@@ -955,58 +944,6 @@ field_ARA_wide.5 %>%
 # Save graph as EPS or TIF
 # ggsave("ARA_field_BFG_cb_wide9.1.eps", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
 # ggsave("ARA_field_BFG_cb_wide9.1.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
-#
-#
-# Alternative version: As a continuous scale
-field_ARA.period_simple <- field_ARA.period %>%
-  select(Round, Date) %>%
-  group_by(Round) %>%
-  summarise(Date = median(Date, na.rm = T)) %>%
-  ungroup()
-#
-# Summarise to get 95% CI
-field_ARA_sum <- summarySE(field_ARA_wide.5, measurevar = "Et_prod_umol_h_m2", groupvars = c("Species", "Round", "BFG"))
-#
-# Plot
-field_ARA_sum %>%
-  left_join(field_ARA.period_simple, by = join_by(Round)) %>%
-  relocate(Date, .after = Round) %>%
-  mutate(Sp = Species,
-         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
-                             Species == "Di" ~ "Dicranum scoparium",
-                             Species == "Hy" ~ "Hylocomium splendens",
-                             Species == "Pl" ~ "Pleurozium schreberi",
-                             Species == "Po" ~ "Polytrichum commune",
-                             Species == "Pti" ~ "Ptilidium ciliare",
-                             Species == "Ra" ~ "Racomitrium lanuginosum",
-                             Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum mixture",
-                             TRUE ~ Species),
-         meanEt_pro = Et_prod_umol_h_m2) %>%
-  ggplot(aes(x = Date, y = meanEt_pro, ymin = meanEt_pro-ci, ymax = meanEt_pro+ci, fill = BFG)) +
-  geom_line(linewidth = 1) +
-  geom_ribbon(alpha = 0.7) +
-  facet_wrap(~Species, scales = "free", ncol = 5) +
-  scale_fill_viridis_d() + 
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b") +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production")) + 
-  # Specify y-axes scales so that some species match
-  facetted_pos_scales(
-    y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 1)), # change breaks by adding: breaks = seq(0, x, xx, xxx)),
-             Species == "Dicranum scoparium" ~ scale_y_continuous(limits = c(0, 4)),
-             Species == "Hylocomium splendens" ~ scale_y_continuous(limits = c(0, 1)),
-             Species == "Pleurozium schreberi" ~ scale_y_continuous(limits = c(0, 1)),
-             Species == "Polytrichum commune" ~ scale_y_continuous(limits = c(0, 4)),
-             Species == "Ptilidium ciliare" ~ scale_y_continuous(limits = c(0, 18)),
-             Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 4)),
-             Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 18)),
-             Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 450)),
-             Species == "Sphagnum mixture" ~ scale_y_continuous(limits = c(0, 18)))
-  ) +
-  theme_classic(base_size = 15) +
-  theme(legend.position = "bottom", panel.spacing = unit(1, "lines"), axis.text.x = element_text(angle = 60, hjust = 1))
-#
 #
 #
 # Thesis work circular graph
@@ -1177,9 +1114,6 @@ ARA_circle_seasons %>%
     legend.text = element_text(size = 10)
   ) +
   coord_radial(start = 0, end = 1.6*pi, inner.radius = 0.1)
-
-
-
 #
 #
 #
@@ -1238,55 +1172,6 @@ ARA_vialRound.basic %>%
 # Save graph as EPS or TIF
 # ggsave("ARA_vialField_BFG_viridis_wide7.1.eps", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
 # ggsave("ARA_vialField_BFG_viridis_wide7.1.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
-#
-#
-# Vials in climate chamber
-ARA_vialRound.basic %>%
-  mutate(Sp = Species,
-         Species = case_when(Species == "Au" ~ "Aulacomnium turgidum",
-                             Species == "Di" ~ "Dicranum scoparium",
-                             Species == "Hy" ~ "Hylocomium splendens",
-                             Species == "Pl" ~ "Pleurozium schreberi",
-                             Species == "Po" ~ "Polytrichum commune",
-                             Species == "Pti" ~ "Ptilidium ciliare",
-                             Species == "Ra" ~ "Racomitrium lanuginosum",
-                             Species == "Sf" ~ "Sphagnum fuscum",
-                             Species == "Sli" ~ "Sphagnum majus",
-                             Species == "S" ~ "Sphagnum mixture",
-                             TRUE ~ Species),
-         Month = case_when(Month == "Feb21" ~ "February",
-                           Month == "Mar21" ~ "March",
-                           Month == "Jul21" ~ "July")) %>%
-  mutate(across(Month, ~ factor(.x, levels=c("February", "March", "July")))) %>%
-  summarise(meanEt_pro = mean(Et_prod_vial.CC, na.rm = TRUE), se = sd(Et_prod_vial.CC)/sqrt(length(Et_prod_vial.CC)), .by = c(Month, Species, Sp)) %>%
-  mutate(BFG = case_when(Sp == "Au" ~ "Short unbranched turf",
-                         Sp == "Di" ~ "Tall unbranched turf",
-                         Sp == "Hy" | Sp == "Pl" ~ "Weft",
-                         Sp == "Po" ~ "Polytrichales",
-                         Sp == "Pti" ~ "Leafy liverwort",
-                         Sp == "Ra" ~ "Large cushion",
-                         Sp == "S" | Sp == "Sli" | Sp == "Sf" ~ "Sphagnum")) %>%
-  ggplot() +
-  geom_errorbar(aes(x = Month, y = meanEt_pro, ymin=meanEt_pro, ymax=meanEt_pro+se), position=position_dodge(.9)) +
-  geom_col(aes(x = Month, y = meanEt_pro, fill = BFG)) + 
-  facet_wrap(~Species, scales = "free", ncol = 4, labeller = labeller(Species = as_labeller(italicize_except_mixture, label_parsed))) + # italicize most, but not the "mixture" in Sphagnum mixture
-  viridis::scale_fill_viridis(discrete = T) +
-  labs(x = "Measuring period (Month)", y = expression("Ethylene production (µmol  "*h^-1*" "*m^-2*")"), title = expression("Bryophyte ethylene production in vials in climate chamber")) + 
-  # Specify y-axes scales so that some species match
-  facetted_pos_scales(
-    y = list(Species == "Aulacomnium turgidum" ~ scale_y_continuous(limits = c(0, 1.05)),
-             Species == "Dicranum scoparium" ~ scale_y_continuous(limits = c(0, 1.05)),
-             Species == "Hylocomium splendens" ~ scale_y_continuous(limits = c(0, 1.05)),
-             Species == "Pleurozium schreberi" ~ scale_y_continuous(limits = c(0, 1.05)),
-             Species == "Polytrichum commune" ~ scale_y_continuous(limits = c(0, 1.05)),
-             Species == "Ptilidium ciliare" ~ scale_y_continuous(limits = c(0, 1.05)),
-             Species == "Racomitrium lanuginosum" ~ scale_y_continuous(limits = c(0, 1.05)),
-             Species == "Sphagnum fuscum" ~ scale_y_continuous(limits = c(0, 6)),
-             Species == "Sphagnum majus" ~ scale_y_continuous(limits = c(0, 6)),
-             Species == "Sphagnum mixture" ~ scale_y_continuous(limits = c(0, 6)))
-  ) +
-  theme_classic(base_size = 15) +
-  theme(panel.spacing = unit(1, "lines")) #,axis.text.x=element_text(angle=60, hjust=1)
 #
 #
 #
