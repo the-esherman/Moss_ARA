@@ -15,9 +15,7 @@ library(car)
 library(nlme)
 library(glmmTMB)
 library(emmeans)
-library(cowplot)
 library(ggh4x)
-library(ggtext)
 #
 #
 #
