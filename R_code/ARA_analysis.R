@@ -10,17 +10,13 @@ Sys.setlocale("LC_ALL", 'en_GB.UTF-8')
 #
 library(plotly)
 library(tidyverse)
-#library(readxl)
 library(lubridate)
 library(car)
 library(nlme)
 library(glmmTMB)
 library(emmeans)
-#library(vegan)
 library(cowplot)
-library(ggrepel)
 library(ggh4x)
-#library(lme4)
 library(ggtext)
 #
 #
