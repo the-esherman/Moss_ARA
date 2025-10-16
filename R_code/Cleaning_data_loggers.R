@@ -98,7 +98,7 @@ xx <- TinyTag_heath.2 %>%
 # 0 duplicates
 #
 # Save Heathland Air temperature
-write_csv(TinyTag_heath.2, "Data_clean/AirT_heath.csv", na = "NA")
+write_csv(TinyTag_heath.2, "Data_clean/Logger_Data/AirT_heath.csv", na = "NA")
 #
 #
 #   ## Wetland habitat ##
@@ -173,7 +173,7 @@ xx <- TinyTag_wetland.2 %>%
 # No duplicates
 #
 # Save Wetland Air temperature
-write_csv(TinyTag_wetland.2, "Data_clean/AirT_wetland.csv", na = "NA")
+write_csv(TinyTag_wetland.2, "Data_clean/Logger_Data/AirT_wetland.csv", na = "NA")
 #
 #
 #
@@ -522,8 +522,8 @@ Wetland <- Wetland %>%
 #
 #
 # Save Heathland and Wetland logger data
-write_csv(Heath, "Data_clean/Heath_EM50.csv", na = "NA")
-write_csv(Wetland, "Data_clean/Wetland_EM50.csv", na = "NA")
+write_csv(Heath, "Data_clean/Logger_Data/Heath_EM50.csv", na = "NA")
+write_csv(Wetland, "Data_clean/Logger_Data/Wetland_EM50.csv", na = "NA")
 
 # Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
 
@@ -644,224 +644,6 @@ flux_all_TempPAR <- full_join(flux_all_Temp, Positive_PAR, by = "Day_ID")
 #
 #
 #
-#=======  ♠   Climate Chamber   ♠ =======
-#
-# Air temperature from TinyTags in the climate chamber
-# Load the data in one long list and combine
-#
-AirT_CC_path <- "Data_raw/Loggers/ClimaCell/" 
-AirT_CC_folder <- dir(AirT_CC_path)
-AirT_CC_list <- list()
-#
-# Loop through each file
-for (file in AirT_CC_folder){
-  
-  # Load data: all TinyTag data from the climate chamber
-  AirT_CC_data <- read_csv(paste(AirT_CC_path, file, sep = ""), skip = 5, col_names = c("Record", "Date_time", "Max_Temp", "AirT", "Min_Temp"))
-  
-  # Add file id to new column
-  AirT_CC_data$id <- str_replace_all(str_extract(file, ".*\\.csv"), c("\\s" = "_", "\\-" = "."))
-  
-  
-  # Name each file uniquely, based on filename. Add to list
-  AirT_CC_list[[str_replace_all(str_extract(file, ".*\\.csv"), c("\\s" = "_", "\\-" = "."))]] <- AirT_CC_data
-  
-  # Remove temp file
-  rm(AirT_CC_data)
-}
-#
-# Combine into one file
-AirT_CC_all <- do.call(bind_rows, AirT_CC_list)
-#
-
-AirT_CC_all.1 <- AirT_CC_all %>%
-  #
-  # Separate TinyTags at different shelves and the ones in the vial itself
-  mutate(loc = str_extract(id, "top|middle|bottom"),
-         loc_vial = str_extract(id, "vial")) %>%
-  mutate(location = if_else(is.na(loc), loc_vial, loc)) %>%
-  select(!c(loc, loc_vial)) %>%
-  #
-  # Separate unit from temperature
-  separate(AirT, sep = " ", into = c("AirT", "Unit")) %>%           
-  separate(Max_Temp, sep = " ", into = c("Max_Temp_C", "UnitMax")) %>%
-  separate(Min_Temp, sep = " ", into = c("Min_Temp_C", "UnitMin")) %>%
-  mutate(across(AirT, as.numeric)) %>%
-  mutate(across(Date_time, ~ymd_hms(.x))) %>%
-  #
-  # Last measurement round was done in July (UTC+2), and should be converted to UTC+1. If DST is wanted for specific times, use the given code.
-  mutate(Tid = if_else(id == "AirT_20210707.10_ClimaCell_middle_stick.csv" | id == "AirT_20210707.10_ClimaCell_middle.csv" | id == "AirT_20210707.10_ClimaCell_top.csv" | id == "AirT_20210707.10_vial.csv" | id == "AirT_20210707.10_ClimaCell_bottom.csv" | id == "AirT_20210707.10_ClimaCell_middle_air.csv", Date_time-hours(1), Date_time))
-#
-#
-# Separate day and time
-AirT_CC_all.2 <- AirT_CC_all.1 %>%
-  # Round to nearest minute
-  mutate(Tid = round_date(ymd_hms(Date_time), unit = "minute")) %>%
-  mutate(Date = date(Tid),
-         Time = hms::as_hms(Tid)) %>%
-  relocate(c(Date, Time, Tid), .after = Record) %>%
-  # Remove id, duplicate date_time, and units
-  select(!c("id", "Date_time", "Unit", "UnitMax", "UnitMin")) %>%
-  rename("Date_time" = Tid,
-         "AirT_C" = AirT)
-#
-#
-# Visualize the temperature in the climate chambers
-#
-# February measurements
-AirT_CC_all.2 %>%
-  filter(Date >= ymd("2021-02-15") & Date <= ymd("2021-03-20")) %>%
-  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
-
-# April
-AirT_CC_all.2 %>%
-  filter(Date >= ymd("2021-03-21") & Date <= ymd("2021-04-15")) %>%
-  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
-
-# July
-AirT_CC_all.2 %>%
-  filter(Date >= ymd("2021-07-01") & Date <= ymd("2021-07-31")) %>%
-  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
-
-# Something in June?
-AirT_CC_all.2 %>%
-  filter(Date >= ymd("2021-06-01") & Date <= ymd("2021-06-30")) %>%
-  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
-
-
-AirT_CC_all.2 %>%
-  filter(Date == ymd("2021-02-15")) %>%
-  ggplot(aes(x = Date_time, y = AirT_C, color = location)) + geom_point()
-#
-#
-# Save climate chamber air temperature
-write_csv(AirT_CC_all.2, "Data_clean/AirT_CC.csv", na = "NA")
-#
-#
-# PAR sensor in the climate chamber
-#
-# February
-# Two periods of measuring, but all values are in the second data file
-#PAR_CC_feb13 <- read_xls("Data_raw/Loggers/[ClimaCell]EM14979 13feb21-1748.xls", col_names = c("Date_time", "PAR1", "Soil_moist2", "Soil_moist3", "Soil_temp3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
-PAR_CC_feb <- read_xls("Data_raw/Loggers/[ClimaCell]EM14979 17feb21-1556.xls", col_names = c("Date_time", "PAR1", "Soil_moist2", "Soil_moist3", "Soil_temp3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
-  select(Date_time, PAR1, PAR4, PAR5) %>%
-  mutate(PAR2 = NA,
-         PAR3 = NA) %>%
-  relocate(c(PAR2, PAR3), .after = PAR1)
-#
-# April
-PAR_CC_apr <- read_xls("Data_raw/Loggers/[ClimaCell 20210331-0402]EM14946 2apr21-1640.xls", col_names = c("Date_time", "Soil_moist1", "Soil_temp1", "Soil_moist2", "Soil_temp2", "Soil_moist3", "Soil_temp3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
-  select(Date_time, PAR4, PAR5) %>%
-  mutate(PAR1 = NA,
-         PAR2 = NA,
-         PAR3 = NA) %>%
-  relocate(c(PAR1, PAR2, PAR3), .before = PAR4)
-#
-# June
-PAR_CC_jun <- read_xls("Data_raw/Loggers/[20210608-10 CC par]EM14946 10jun21-1606.xls", col_names = c("Date_time", "PAR1", "PAR2", "PAR3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
-  filter(Date_time >= ymd_hms("2021-04-03T01:00:00")) # Remove earlier measurements
-#
-# July
-PAR_CC_jul <- read_xls("Data_raw/Loggers/[ClimaCell 20210707-10]EM14943 12jul21-1035.xls", col_names = c("Date_time", "PAR1", "PAR2", "PAR3", "PAR4", "PAR5"), skip = 3, col_types = c("date", "numeric", "numeric", "numeric", "numeric", "numeric")) %>%
-  filter(Date_time >= ymd_hms("2021-07-01T01:00:00")) # Remove earlier measurements
-#
-# Combine PAR measurements
-PAR_CC <- bind_rows(list(PAR_CC_feb, PAR_CC_apr, PAR_CC_jun, PAR_CC_jul))
-#
-# Clean
-PAR_CC.1 <- PAR_CC %>%
-  # As only one sensor is plugged in at a time, it is easy to sum
-  rowwise() %>%
-  mutate(PAR = sum(PAR1, PAR2, PAR3, PAR4, PAR5, na.rm = TRUE)) %>%
-  ungroup() %>%
-  # Alternative method, testing that there is only one sensor plugged (redundant)
-  # mutate(PARx = case_when(!is.na(PAR1) 
-  #                         & (is.na(PAR2) | PAR2 == 0) 
-  #                         & (is.na(PAR3) | PAR3 == 0) 
-  #                         & (is.na(PAR4) | PAR4 == 0) 
-  #                         & (is.na(PAR5) | PAR5 == 0) ~ PAR1,
-  #                        (is.na(PAR1) | PAR1 == 0) 
-  #                        & !is.na(PAR2) 
-  #                        & (is.na(PAR3) | PAR3 == 0) 
-  #                        & (is.na(PAR4) | PAR4 == 0) 
-  #                        & (is.na(PAR5) | PAR5 == 0) ~ PAR2,
-  #                        (is.na(PAR1) | PAR1 == 0)
-  #                        & (is.na(PAR2) | PAR2 == 0)
-  #                        & !is.na(PAR3) 
-  #                        & (is.na(PAR4) | PAR4 == 0) 
-  #                        & (is.na(PAR5) | PAR5 == 0) ~ PAR3,
-  #                        (is.na(PAR1) | PAR1 == 0) 
-  #                        & (is.na(PAR2) | PAR2 == 0) 
-  #                        & (is.na(PAR3) | PAR3 == 0) 
-  #                        & !is.na(PAR4) 
-  #                        & (is.na(PAR5) | PAR5 == 0) ~ PAR4,
-  #                        (is.na(PAR1) | PAR1 == 0) 
-  #                        & (is.na(PAR2) | PAR2 == 0) 
-  #                        & (is.na(PAR3) | PAR3 == 0) 
-  #                        & (is.na(PAR4) | PAR4 == 0)
-  #                        & !is.na(PAR5) ~ PAR5,
-  #                        TRUE ~ NA))
-  # Another alternative (from flux script):
-  # mutate(PAR1 = replace_na(PAR1, 0),
-  #        PAR2 = replace_na(PAR2, 0),
-  #        PAR3 = replace_na(PAR3, 0),
-  #        PAR4 = replace_na(PAR4, 0),
-  #        PAR5 = replace_na(PAR5, 0)) %>%
-  # mutate(PAR = case_when(PAR1 != 0 & PAR2 == 0 & PAR3 == 0 & PAR4 == 0 & PAR5 == 0 ~ PAR1,
-  #                        PAR1 == 0 & PAR2 != 0 & PAR3 == 0 & PAR4 == 0 & PAR5 == 0 ~ PAR2,
-  #                        PAR1 == 0 & PAR2 == 0 & PAR3 != 0 & PAR4 == 0 & PAR5 == 0 ~ PAR3,
-  #                        PAR1 == 0 & PAR2 == 0 & PAR3 == 0 & PAR4 != 0 & PAR5 == 0 ~ PAR4,
-  #                        PAR1 == 0 & PAR2 == 0 & PAR3 == 0 & PAR4 == 0 & PAR5 != 0 ~ PAR5,
-  #                        TRUE ~ 0)) %>%
-  select(Date_time, PAR)
-
-
-PAR_CC.1x <- PAR_CC %>%
-  
-  select(Date_time, PAR)
-
-#
-# Check for duplicates
-x <- PAR_CC.1 %>%
-  distinct()
-#
-xx <- PAR_CC.1 %>%
-  filter(n() > 1, .by = c(Date_time, PAR))
-# 0 duplicates
-#
-#
-# Save climate chamber PAR
-write_csv(PAR_CC.1, "Data_clean/PAR_CC.csv", na = "NA")
-
-
-PAR_CC.1 %>%
-  ggplot(aes(x = Date_time, y = PAR)) + geom_point()
-
-# Visualize the temperature in the climate chambers
-#
-# February measurements
-PAR_CC.1 %>%
-  filter(Date >= ymd("2021-02-15") & Date <= ymd("2021-03-20")) %>%
-  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
-
-# April
-PAR_CC.1 %>%
-  filter(Date >= ymd("2021-03-21") & Date <= ymd("2021-04-15")) %>%
-  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
-
-# July
-PAR_CC.1 %>%
-  filter(Date >= ymd("2021-07-01") & Date <= ymd("2021-07-31")) %>%
-  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
-
-# Something in June?
-PAR_CC.1 %>%
-  filter(Date >= ymd("2021-06-01") & Date <= ymd("2021-06-30")) %>%
-  ggplot(aes(x = Date_time, y = PAR, color = location)) + geom_point()
-
-#
-#
-#
 #=======  ♠   Vial moisture     ♠ =======
 #
 # vial moisture from all three rounds
@@ -882,7 +664,7 @@ vial_moisture <- bind_rows(list(vial_moisture_A, vial_moisture_B, vial_moisture_
   select(!c(Weight_wVial, Vial))
 #
 # Save combined data
-write_csv(vial_moisture, "Data_clean/vial_moisture.csv", na = "NA")
+write_csv(vial_moisture, "Data_clean/ARA/vial_moisture.csv", na = "NA")
 #
 #
 #
