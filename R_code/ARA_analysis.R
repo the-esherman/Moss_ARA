@@ -26,10 +26,10 @@ library(ggh4x)
 #    ╚═══════╝
 #
 # Import field datasets
-field_ARA <- read_csv("Data_clean/field_ARA.csv", col_names = TRUE)
+field_ARA <- read_csv("Data_clean/ARA/field_ARA.csv", col_names = TRUE)
 #
 # Bryophyte density count
-densityCount <- read_csv("Data_clean/Moss_counts.csv", col_types = "cccnnnc")
+densityCount <- read_csv("Data_clean/ARA/Moss_counts.csv", col_types = "cccnnnc")
 densityArea <- (2.2/2)^2*pi # Area of one sample for density count in cm2
 #
 # The small corers that were used for density and for selecting vial samples:
@@ -37,12 +37,12 @@ densityArea <- (2.2/2)^2*pi # Area of one sample for density count in cm2
 # Outer diameter: 2.5cm
 #
 # Air temperature
-AirT_wetland <- read_csv("Data_clean/AirT_wetland.csv", col_names = TRUE)
-AirT_heath <- read_csv("Data_clean/AirT_heath.csv", col_names = TRUE)
+AirT_wetland <- read_csv("Data_clean/Logger_data/AirT_wetland.csv", col_names = TRUE)
+AirT_heath <- read_csv("Data_clean/Logger_data/AirT_heath.csv", col_names = TRUE)
 #
 # Soil parameters
-EM50_Heath <- read_csv("Data_clean/Heath_EM50.csv", col_names = TRUE)
-EM50_Wetland <- read_csv("Data_clean/Wetland_EM50.csv", col_names = TRUE)
+EM50_Heath <- read_csv("Data_clean/Logger_data/Heath_EM50.csv", col_names = TRUE)
+EM50_Wetland <- read_csv("Data_clean/Logger_data/Wetland_EM50.csv", col_names = TRUE)
 #
 # Chamber size
 Ch_H <- 7 # Chamber height (cm) above moss surface. This needs to be changed to match each plot estimated height
@@ -55,10 +55,10 @@ Ch_area_m2 <- (Ch_r^2*pi)/10000 # Chamber area in m2
 #    ╚═══════╝
 #
 # Import vial dataset
-vial_ARA <- read_csv("Data_clean/vial_ARA.csv", col_names = TRUE)
+vial_ARA <- read_csv("Data_clean/ARA/vial_ARA.csv", col_names = TRUE)
 #
 # Vial moisture
-vial_moisture <- read_csv("Data_clean/vial_moisture.csv", col_names = TRUE)
+vial_moisture <- read_csv("Data_clean/ARA/vial_moisture.csv", col_names = TRUE)
 #
 # Vial size
 Vial_vol_L <- 20/1000 # 20mL vials, the small ones, and 22 for the taller ones. Does not take into account the actual headspace after mosses
