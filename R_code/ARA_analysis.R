@@ -1152,6 +1152,9 @@ field_ARA.plot.long %>%
   guides(col = guide_legend(nrow = 1)) # For colors all in one row
 #guides(shape = guide_legend(nrow = 1)) # For all shapes in one row
 #
+# Save graph as TIF (EPS does not support semi-transparency)
+# ggsave("Fig_selected_species2.4.TIF", path = "images", width = 23, height = 20, units = "cm", dpi = 300)
+#
 #
 #
 #-------  ♪   Outliers      ♪ -------
