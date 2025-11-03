@@ -824,7 +824,7 @@ field_ARA_wide.5 %>%
 #
 # Save graph as EPS or TIF
 # ggsave("ARA_field_BFG_cb_wide9.1.eps", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
-# ggsave("ARA_field_BFG_cb_wide9.1.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
+# ggsave("ARA_field_BFG_cb_wide9.2.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 600)
 #
 #
 # Thesis work circular graph
@@ -1052,7 +1052,7 @@ ARA_vialRound.basic %>%
 #
 # Save graph as EPS or TIF
 # ggsave("ARA_vialField_BFG_viridis_wide7.1.eps", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
-# ggsave("ARA_vialField_BFG_viridis_wide7.1.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 300)
+# ggsave("ARA_vialField_BFG_viridis_wide7.2.TIF", path = "images", width = 35, height = 22, units = "cm", dpi = 600)
 #
 #
 #
@@ -1153,7 +1153,7 @@ field_ARA.plot.long %>%
 #guides(shape = guide_legend(nrow = 1)) # For all shapes in one row
 #
 # Save graph as TIF (EPS does not support semi-transparency)
-# ggsave("Fig_selected_species2.4.TIF", path = "images", width = 23, height = 20, units = "cm", dpi = 300)
+# ggsave("Fig_selected_species2.5.TIF", path = "images", width = 23, height = 20, units = "cm", dpi = 600)
 #
 #
 #
