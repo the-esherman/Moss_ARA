@@ -771,17 +771,7 @@ PAR_plot <- Environ.plot %>%
   theme_bw(base_size = 25) +
   theme(legend.position = "none", axis.text.x = element_blank(), axis.title.x = element_blank(), axis.text.y = element_text(size = 15), axis.title.y = element_text(size = 15)) 
 #
-# Plot graph
-# Align main graphs
-plot_grid(airT_plot, soilT_plot, soilM_plot, PAR_plot, align = "v", ncol = 1, rel_heights = c(3,3,2.5,3.5))
-#
-# With added mire environmental values
-# Make all plots align, then add legend
-env_plot <- plot_grid(airT_plot, soilT_plot.2, soilM_plot, PAR_plot, align = "v", ncol = 1, rel_heights = c(3,3,2.5,3.5))
-plot_grid(env_plot, soilT_legend, ncol = 1, rel_heights = c(9, 1))
-#
-#
-# Add measurement periods as small arrows
+# Add measurement periods
 #
 # Import days of measurement in the field:
 ARA_period <- field_ARA.period
@@ -790,34 +780,6 @@ ARA_period <- ARA_period %>%
   group_by(Round) %>%
   filter(Date == max(Date) | Date == min(Date)) %>%
   ungroup()
-#
-# Make the plot for ARA period
-ARA_period_plot <- Environ.plot %>%
-  ggplot() +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 1][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 1][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 2][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 2][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 3][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 3][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 4][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 4][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 5][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 5][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 6][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 6][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 7][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 7][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 8][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 8][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 9][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 9][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 10][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 10][2]), yend = 0), linewidth = 5, color = "#000000") +
-  geom_segment(aes(x = as.Date(ARA_period$Date[ARA_period$Round == 11][1]), y = 0, xend = as.Date(ARA_period$Date[ARA_period$Round == 11][2]), yend = 0), linewidth = 5, color = "#000000") +
-  scale_y_continuous(breaks = c(0, 200), minor_breaks = c(100, 300)) +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%d-%b") +
-  coord_cartesian(xlim = measureDays) +
-  labs(x = element_blank(), y = expression("ARA")) +
-  theme_bw(base_size = 25) +
-  theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.text.y = element_blank(), axis.title.y = element_text(size = 15), axis.ticks.y = element_blank())
-#
-# Make all plots align, then add legend
-env_plot.ARA <- plot_grid(airT_plot, soilT_plot.2, soilM_plot, PAR_plot, ARA_period_plot, align = "v", ncol = 1, rel_heights = c(3,3,2.5,3.5,1.5))
-plot_grid(env_plot.ARA, soilT_legend, ncol = 1, rel_heights = c(9, 1))
-
-
-# Add measuring period to each 
 #
 airT_plot_ARA <- airT_plot +
   annotate("rect", xmin = as.Date(ARA_period$Date[ARA_period$Round == 1][1]), xmax = as.Date(ARA_period$Date[ARA_period$Round == 1][2]), ymin = -Inf, ymax = Inf, fill = "black", alpha = 0.3) +
